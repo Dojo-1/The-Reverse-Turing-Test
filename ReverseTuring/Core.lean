@@ -98,9 +98,7 @@ theorem run_eq_of_reply_eq {Question Answer : Type}
   induction n with
   | zero => rfl
   | succ n ih =>
-      simp only [run, ih]
-      exact congrArg (fun a => run n ask r₂ ++ [(ask (run n ask r₂), a)])
-        (h (run n ask r₂) (ask (run n ask r₂)))
+      simp [run, ih, h]
 
 /-- An observation-blind classifier must return equal verdicts on equal histories. -/
 theorem same_history_same_verdict {Question Answer Verdict : Type}
