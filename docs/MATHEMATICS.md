@@ -45,7 +45,7 @@ Proof: every summand is bounded by the maximum, and a maximizer can be selected 
 
 For uniform priors and p_N=p_HA=p_HB, the optimum is 1/3. For two equally likely hypotheses, Acc*=(1+TV(P_0,P_1))/2. A binary total-variation expression cannot be substituted for the three-class expression.
 
-The Lean `Bayes.lean` module uses **natural-number unnormalized joint masses** (likelihood times a common normalization factor) and proves the pointwise bound and sum upper bound. It does not yet prove attainment of the bound, normalized probability statements, or a stochastic extension.
+The Lean `Bayes.lean` module uses **natural-number unnormalized joint masses** (likelihood times a common normalization factor) and proves the pointwise bound, its finite-table sum, and **attainment by an explicit argmax classifier**. It does not yet formalize normalized probability statements, conditional kernels, or a stochastic extension.
 
 ## 4. Two different information monotonicity statements
 
@@ -88,7 +88,7 @@ H4 (interpretive): better epistemic calibration is not interchangeable with bett
 - **R0**: deterministic histories, channel labels, observation collisions (existing core).
 - **R1**: information graph and link/origin confounding; finite integer weighted classifier bound (added).
 - **R2**: exact finite probability kernels on a finite type and equality of induced transcript laws under adaptive queries.
-- **R3**: optimal finite classifier (attainment + multi-class Bayes equation), Blackwell garbling, data processing.
+- **R3**: normalized multi-class Bayes equation (finite weighted attainment already in R1), Blackwell garbling, data processing.
 - **R4**: fully specified utilities, best response, pooling/separating conditions and equilibrium existence for a *finite specified game*.
 - **R5**: connect operational evaluation traces to the formal model; register validity and independence gaps.
 
