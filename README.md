@@ -21,6 +21,18 @@
 
 ---
 
+### ◷ R4 / Hold the answer. Not the experiment.
+
+A human may type slowly; a model may answer in milliseconds. When C can measure that latency, the game risks identifying **the clock rather than the participant**.
+
+The controller can now optionally activate a **fixed-release response gate** before the first public question. Respondents may finish at different times, but an on-time answer becomes public only at the precommitted boundary. The server operates its own release worker and records missed deadlines separately.
+
+**Play normally** for an open, unpaced game—or choose controlled timing for a particular research trial. Neither mode is a universal Turing-test rule.
+
+[**◷ Pacing design, limitations and controls**](docs/PACING.md) · [**⌘ Pilot protocol (not run)**](docs/PILOT_PREREGISTRATION.md) · [**≃ Lean fixed-gate theorem**](ReverseTuring/Pacing.lean)
+
+---
+
 ### ✦ R3 / Bring your own machine minds
 
 The conductor and genuine machine respondents can now be driven by **separate model clients** rather than a human manually copying every reply. Each actor uses only its assigned role token and the public/private messages that role is permitted to see.
@@ -44,7 +56,7 @@ The `scripted` provider offers deterministic plumbing checks without an LLM; it 
 
 ### ▶ Playable local alpha / R2
 
-The game has stepped off the page. A **local browser relay** coordinates separate machine and human participants, a machine conductor, blind substitution, optional *text-based* private links, and a locked probabilistic verdict. It does not implement real KV transfers. R3 adds optional model clients, without changing the controller's hidden-information boundary.
+The game has stepped off the page. A **local browser relay** coordinates separate machine and human participants, a machine conductor, concealed substitution, optional *text-based* private links, and a locked probabilistic verdict. It does not implement real KV transfers. R3 adds optional model clients; R4 adds optional fixed-release timing control.
 
 &#x200B;
 
@@ -166,6 +178,7 @@ The project uses Lean 4 / Lake, pinned to `v4.35.0`, with only Lean's `Init` lib
 | [`ReverseTuring/Topology.lean`](ReverseTuring/Topology.lean) | Directed links, A/B relabeling, origin–connectivity confounding |
 | [`ReverseTuring/Bayes.lean`](ReverseTuring/Bayes.lean) | Finite classification bound and its maximizing decision rule |
 | [`ReverseTuring/Noninterference.lean`](ReverseTuring/Noninterference.lean) | Pre-reveal projection equality for identical public transcripts |
+| [`ReverseTuring/Pacing.lean`](ReverseTuring/Pacing.lean) | Abstract invariance of visible transcripts across early completion times |
 | [Proof-to-engine contract](docs/PROOF_IMPLEMENTATION_BRIDGE.md) | Exact correspondence claimed; black-box tests and remaining gaps |
 | [Proposed 24-trial pilot](docs/PILOT_PREREGISTRATION.md) | Factorial link/origin controls, pacing gate, frozen analysis and allocation commitment |
 | [Mathematical analysis](docs/MATHEMATICS.md) | Game theory, strategy, information topology, hypotheses and counterexamples |
@@ -176,9 +189,9 @@ The project uses Lean 4 / Lake, pinned to `v4.35.0`, with only Lean's `Init` lib
 
 This is an open research playground, not an intelligence leaderboard. We are interested in what happens when a human uses Gödel, Curry, machine-like restraint, or plain conversational dexterity; when machines share hidden context; and when a conductor learns that its **certainty has outpaced its evidence**.
 
-**Already here:** a manual play protocol, an executable local browser relay, optional role-isolated model drivers, a participant controller, Python and mock-provider regression tests, Lean finite structural proofs, and an evidence ledger.
+**Already here:** a manual play protocol, an executable local browser relay, optional role-isolated model drivers, fixed-release pacing, a participant controller, Python and mock-provider regression tests, Lean finite structural proofs, and an evidence ledger.
 
-**Not here yet:** an autonomous experiment controller, production-ready remote multiplayer hosting, verified model-to-model KV translation, human-participant trial results, or an equilibrium theorem for the open family of games.
+**Not here yet:** an autonomous trial phase controller, independently measured end-to-end timing compliance, production-ready remote multiplayer hosting, verified model-to-model KV translation, human-participant results, or an equilibrium theorem for the open family of games.
 
 As experiments accumulate, their conditions, failed runs, and counterexamples belong beside their successes.
 
