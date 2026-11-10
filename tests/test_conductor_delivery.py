@@ -174,7 +174,7 @@ class ConductorClientTests(unittest.TestCase):
                 receipt_path = Path(td) / "C.jsonl"
                 c = RelayClient(base, game.tokens["conductor"])
                 instrumented = ConductorReceipt(
-                    c, receipt_path, "REHEARSAL-LOCAL", poll_seconds=0.05,
+                    c, receipt_path, "REHEARSAL-LOCAL", poll_seconds=0.1,
                 )
                 try:
                     game.act("controller", "configure_pacing", {"seconds": 1})
