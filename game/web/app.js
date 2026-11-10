@@ -71,6 +71,12 @@ function buildController(v) {
     "<span class='pill mint'>INDEPENDENT CONTROLLER</span>",
     "<h2>Hold the secret.</h2><p>You control the intervention. Do not expose it to C.</p>",
     "<div id='phase' class='status'></div>",
+    "<div class='control-group'><h3>00 / Optional fixed-release mode</h3>",
+    "<p class='small'>For timing-controlled trials, set a common answer gate BEFORE C asks its first question. Stored timestamps are redacted, but actual browser/network jitter remains measurable.</p>",
+    "<form id='pace-form'><label>Release interval (1–600 seconds)",
+    "<input type='number' id='pace-seconds' min='1' max='600' step='1' value='45' required>",
+    "</label><button class='btn alt'>Enable fixed answer boundary</button></form>",
+    "<div id='pace-status' class='status'></div></div>",
     "<div class='control-group'><h3>01 / Baseline links</h3><form id='configure'>",
     "<label class='checkline'><input id='base-ab' type='checkbox'>A → B private text</label>",
     "<label class='checkline'><input id='base-ba' type='checkbox'>B → A private text</label>",
@@ -101,6 +107,10 @@ function buildController(v) {
     document.getElementById(prefix + "-ab").checked = v.links.A_to_B;
     document.getElementById(prefix + "-ba").checked = v.links.B_to_A;
   }
+  document.getElementById("pace-form").onsubmit = e => {
+    e.preventDefault();
+    act("configure_pacing", { seconds: Number(document.getElementById("pace-seconds").value) });
+  };
   document.getElementById("configure").onsubmit = e => {
     e.preventDefault();
     const choice = links("base");
@@ -150,7 +160,7 @@ function buildConductor() {
     "<form id='verdict'><div class='grid3'>",
     "<label>No human<input id='prob-n' type='number' min='0' max='1' step='.01' placeholder='0–1' required></label>",
     "<label>Human A<input id='prob-a' type='number' min='0' max='1' step='.01' placeholder='0–1' required></label>",
-    "<label>Human B<input id='prob-b' type='number' min='0' max='1' step='.01' value='.33' required></label>",
+    "<label>Human B<input id='prob-b' type='number' min='0' max='1' step='.01' placeholder='0–1' required></label>",
     "</div><label>Evidence and alternatives<textarea id='evidence' maxlength='2000'></textarea></label>",
     "<button class='btn alt'>Lock verdict</button></form></div><div id='outcome'></div>"
   ].join(""), [
@@ -187,6 +197,7 @@ function buildRespondent(v) {
   panelLayout([
     "<span class='pill mint' id='respondent-label'>RESPONDENT</span>",
     "<h2>Be the machine. Or seem to be.</h2>",
+    "<div id='release-status' class='status hidden'></div>",
     "<p>The conductor sees only your channel label, not your credential.</p>",
     "<form id='answer-form'><label>Public reply",
     "<textarea id='answer' maxlength='2000' required></textarea></label>",
@@ -221,6 +232,16 @@ function render(v) {
       v.intervened ? "SECRET INTERVENTION COMMITTED" :
       v.baseline_ready ? "BASELINE READY · make your move" :
       "BASELINE · obtain one answer each from A and B";
+    const paced = v.pacing_seconds !== null;
+    document.getElementById("pace-form").classList.toggle("hidden",
+      paced || v.public.length > 0 || v.intervened || !!v.verdict);
+    document.getElementById("pace-status").textContent = paced
+      ? ("FIXED RELEASE: " + v.pacing_seconds + "s" +
+         (v.pending_gate ? (" · channel " + v.pending_gate.channel +
+          " · " + (v.pending_gate.response_buffered ? "ANSWER BUFFERED" : "AWAITING ANSWER") +
+          " · gate in " + Math.ceil(v.pending_gate.seconds_remaining) + "s") : "") +
+         (v.timing_violations.length ? (" · " + v.timing_violations.length + " DEADLINE MISSES: trial invalid for timing-controlled analysis") : ""))
+      : "UNPACED: response arrival timing remains visible to the conductor.";
     document.getElementById("configure").classList.toggle("hidden", v.intervened || !!v.verdict);
     document.getElementById("intervene").classList.toggle("hidden", v.intervened || !!v.verdict);
     document.getElementById("reveal").disabled = !v.verdict || v.revealed;
@@ -243,7 +264,13 @@ function render(v) {
       "REVEALED · " + v.outcome.condition + " · Brier: " + v.outcome.score.brier.toFixed(4)));
     entries("feed", v.public);
   } else if (v.active) {
-    document.getElementById("answer-form").classList.toggle("hidden", v.locked || v.revealed);
+    document.getElementById("answer-form").classList.toggle("hidden",
+      v.locked || v.revealed || !!v.awaiting_release);
+    const release = document.getElementById("release-status");
+    release.classList.toggle("hidden", !v.awaiting_release);
+    release.textContent = v.awaiting_release
+      ? "ANSWER ACCEPTED. Held privately until the fixed release boundary."
+      : "";
     document.getElementById("private-actions").classList.toggle("hidden", !v.can_whisper || v.locked || v.revealed);
     document.getElementById("private-feed-wrap").classList.toggle("hidden", !v.private.length);
     entries("feed", v.public);
