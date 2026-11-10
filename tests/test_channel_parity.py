@@ -74,6 +74,50 @@ class PrivateViewParityTests(unittest.TestCase):
             {"baseline-A-to-B secret", "baseline-B-to-A secret"}
         )
 
+    def test_strict_pilot_off_and_on_factorial_history_parity(self):
+        class Clock:
+            def __init__(self):
+                self.now = 100.0
+
+            def __call__(self):
+                return self.now
+
+            def advance(self):
+                self.now += 45.0
+
+        for on in (False, True):
+            histories = []
+            for condition, role in (("humanB", "human"),
+                                    ("machineB", "replacement_B")):
+                clock = Clock()
+                g = Game(clock=clock)
+                g.act("controller", "configure_pilot", {})
+                for channel in ("A", "B"):
+                    g.act("conductor", "ask", {
+                        "channel": channel, "body": "Pilot baseline"
+                    })
+                    g.act("machine_" + channel, "whisper", {
+                        "body": "Pilot baseline private " + channel
+                    })
+                    g.act("machine_" + channel, "answer", {
+                        "body": "Genuine baseline"
+                    })
+                    clock.advance()
+                    g.view("conductor")
+                g.act("controller", "intervene", {
+                    "condition": condition,
+                    "links": {"A_to_B": on, "B_to_A": on},
+                    "human_gateway": on and condition == "humanB",
+                })
+                histories.append(g.view(role)["private"])
+                self.assertNotIn(
+                    "Pilot baseline private",
+                    json.dumps(g.view("conductor"))
+                )
+                self.assertEqual(len(g.view("controller")["private"]), 2)
+            self.assertEqual(histories[0], histories[1])
+            self.assertEqual(len(histories[0]), 2 if on else 0)
+
     def test_one_way_change_revokes_only_now_closed_direction(self):
         g = prepared_world()
         g.act("controller", "configure", {
