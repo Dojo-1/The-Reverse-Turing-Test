@@ -80,7 +80,7 @@ function buildController(v) {
     "<label>Reason for invalid/incomplete run<textarea id='abort-reason' maxlength='2000' required></textarea></label>",
     "<button class='btn warn' type='submit'>Abort and preserve record</button>",
     "</form></div>",
-    "<div class='control-group'><h3>00b / Open-game pacing</h3>"
+    "<div class='control-group'><h3>00b / Open-game pacing</h3>",
     "<p class='small'>For timing-controlled trials, set a common answer gate BEFORE C asks its first question. Stored timestamps are redacted, but actual browser/network jitter remains measurable.</p>",
     "<form id='pace-form'><label>Release interval (1–600 seconds)",
     "<input type='number' id='pace-seconds' min='1' max='600' step='1' value='45' required>",
