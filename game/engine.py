@@ -118,12 +118,13 @@ class Game:
             self._configure_links(data.get("links"))
             self.audit.append(self._event("configure", links=dict(self.links)))
             return
-        if action == "intervene":
+        if action in ("intervene", "random_intervene"):
             if self.intervened or self.revealed or self.verdict is not None:
                 raise RuleError("Only one hidden intervention is allowed before a verdict")
             if not self._baseline_ready():
                 raise RuleError("First obtain a genuine answer from both A and B")
-            condition = data.get("condition")
+            randomized = action == "random_intervene"
+            condition = secrets.choice(self.CONDITIONS) if randomized else data.get("condition")
             if condition not in self.CONDITIONS:
                 raise RuleError("Unknown hidden intervention")
             links = data.get("links", dict(self.links))
@@ -131,7 +132,10 @@ class Game:
             if type(gateway) is not bool:
                 raise RuleError("human_gateway must be a boolean")
             if gateway and condition not in ("humanA", "humanB"):
-                raise RuleError("Only human substitutions can have a human gateway")
+                if randomized:
+                    gateway = False
+                else:
+                    raise RuleError("Only human substitutions can have a human gateway")
             self._configure_links(links)
             self.human_gateway = gateway
             if condition == "humanA":
@@ -147,6 +151,7 @@ class Game:
             self.audit.append(
                 self._event(
                     "intervene", condition=condition,
+                    selection="uniform_five_way" if randomized else "controller_choice",
                     links=dict(self.links), human_gateway=gateway,
                 )
             )
