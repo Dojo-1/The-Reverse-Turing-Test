@@ -88,3 +88,13 @@ Publish all 24 assignments and raw verdicts, including aborts and invalid output
 ## Current status
 
 Schedule generator and unit tests: implemented. Runtime delivery pacing: **not implemented in the automatic actor path**. Participant recruitment and independent allocation verification: **not started**. Human/LLM trials: **zero completed**.
+
+## Pre-first-trial R5 implementation amendment (2026-11-10)
+
+**No study observations have been collected.** R5 provides an opt-in `configure_pilot` controller action that atomically locks the 45-second release gate, baseline private links ON/ON, A-then-B genuine machine questions and exactly six continuation questions. It disallows the casual five-way random button in this protocol: the controller must follow the separate committed 24-row allocation. A human with link ON must have an authorized machine gateway, and link changes are fully ON or fully OFF.
+
+After the private intervention, the controller sends a **public, condition-independent continuation marker**, which the conductor sees in every trial. This is an observable element not explicitly specified by the earliest protocol draft, so it is disclosed here **before trials begin**, not retroactively treated as if it were always present. Independently preregister this exact source revision and the [R5 strict-pilot guide](STRICT_PILOT.md) before data collection. Changes after first observations require a new protocol identifier.
+
+The R5 [read-only timing observer](OBSERVER.md) timestamps when it first sees events on a separate HTTP polling connection. It is neither an independent human assessor nor direct measurement of actual C receipt. Therefore, even if `pilot_valid_for_primary=true`, **timing compliance for the primary comparison remains externally unverified** until client-reception measurements and clock calibration are performed.
+
+Trials that abort or miss deadlines remain in the complete 24-row assignment report; their values cannot be quietly imputed or replaced. No inferential or human-detection results are claimed by the implementation.
