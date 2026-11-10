@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Lean / Lake
+.lake/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets, private trial schedules and identifiable records
+.env
+.env.*
+!.env.example
+private/
+.secrets/
+rtt-pilot-private*.json
+private-witness-*.jsonl
+pilot-audit*.json
+
+# Local temporary files
+*.tmp
