@@ -25,6 +25,9 @@ class Game:
     HYPOTHESES = ("no_human", "human_A", "human_B")
     MAX_TEXT = 2000
     RELEASE_TOLERANCE_SECONDS = 1.0
+    PILOT_BASELINE = 2
+    PILOT_TOTAL_QUESTIONS = 8
+    PILOT_GATE_SECONDS = 45.0
 
     def __init__(self, *, clock=None):
         self.tokens = {role: secrets.token_urlsafe(32) for role in self.ROLES}
@@ -45,6 +48,10 @@ class Game:
         self.pacing_seconds = None
         self.pending_release = None
         self.timing_violations = []
+        self.pilot_mode = False
+        self.pilot_resumed = False
+        self.pilot_aborted = False
+        self.pilot_abort_reason = None
 
     def identify(self, token):
         if not isinstance(token, str) or token not in self.token_to_role:
@@ -193,8 +200,91 @@ class Game:
             event["channel"] for event in self.public if event["kind"] == "answer"
         }
 
+    def _question_count(self):
+        return sum(event["kind"] == "question" for event in self.public)
+
+    def _pilot_phase(self):
+        """Public phase is derived from visible dialogue and public resume.
+
+        Hidden participant identity/condition is deliberately not consulted.
+        The phase marker is an explicit public experimental event, not a
+        leaked controller action.
+        """
+        if not self.pilot_mode:
+            return None
+        if self.pilot_aborted:
+            return "aborted"
+        if self.revealed:
+            return "revealed"
+        if self.verdict is not None:
+            return "locked"
+        n = self._question_count()
+        if n < self.PILOT_BASELINE or not self._baseline_ready():
+            return "baseline"
+        if not self.pilot_resumed:
+            return "transition"
+        if n < self.PILOT_TOTAL_QUESTIONS or self.pending_release is not None:
+            return "continuation"
+        return "verdict"
+
+    def _pilot_valid(self):
+        return bool(
+            self.pilot_mode and not self.pilot_aborted
+            and self.verdict is not None and self.intervened
+            and self.pilot_resumed
+            and self._question_count() == self.PILOT_TOTAL_QUESTIONS
+            and sum(e["kind"] == "answer" for e in self.public)
+                == self.PILOT_TOTAL_QUESTIONS
+            and self.pending_release is None
+            and not self.timing_violations
+        )
+
     def _post_controller(self, action, data):
+        if action == "configure_pilot":
+            if (self.pilot_mode or self.public or self.intervened
+                    or self.revealed or self.verdict is not None
+                    or self.pacing_seconds is not None):
+                raise RuleError("Pilot configuration must precede all interrogation and pacing")
+            self.pilot_mode = True
+            self.pacing_seconds = self.PILOT_GATE_SECONDS
+            self.links = {"A_to_B": True, "B_to_A": True}
+            self.audit.append(self._event(
+                "configure_pilot", protocol="RTT-PILOT/1",
+                baseline_questions=self.PILOT_BASELINE,
+                continuation_questions=self.PILOT_TOTAL_QUESTIONS - self.PILOT_BASELINE,
+                gate_seconds=self.pacing_seconds,
+                links=dict(self.links),
+            ))
+            return
+        if action == "resume_pilot":
+            if (not self.pilot_mode or self.pilot_aborted or self.revealed
+                    or not self.intervened or self.pilot_resumed
+                    or self.pending_release is not None
+                    or self._question_count() != self.PILOT_BASELINE
+                    or not self._baseline_ready()):
+                raise RuleError("Pilot resume requires a completed baseline and committed intervention")
+            self.pilot_resumed = True
+            self.public.append(self._event(
+                "phase", channel="C", speaker="CTRL",
+                body="The fixed baseline is complete. Continue interrogation."
+            ))
+            self.audit.append(self._event("resume_pilot"))
+            return
+        if action == "abort_pilot":
+            if not self.pilot_mode or self.pilot_aborted or self.revealed:
+                raise RuleError("Only an active pilot can be aborted")
+            reason = data.get("reason")
+            if not isinstance(reason, str) or not reason.strip() or len(reason) > self.MAX_TEXT:
+                raise RuleError("Provide a controller-only reason of at most 2000 characters")
+            self.pilot_aborted = True
+            self.pilot_abort_reason = reason.strip()
+            self.audit.append(self._event("abort_pilot", reason=self.pilot_abort_reason))
+            return
+        if self.pilot_aborted:
+            raise RuleError("Pilot aborted; export the preserved controller record")
         if action == "configure_pacing":
+            if self.pilot_mode:
+                raise RuleError("Pilot gate is fixed at 45 seconds")
             if self.public or self.intervened or self.revealed or self.verdict:
                 raise RuleError("Pacing must be configured before first public question")
             seconds = data.get("seconds")
@@ -207,6 +297,8 @@ class Game:
             self.audit.append(self._event("configure_pacing", seconds=self.pacing_seconds))
             return
         if action == "configure":
+            if self.pilot_mode:
+                raise RuleError("Pilot baseline link topology is fixed")
             if self.intervened or self.revealed or self.verdict is not None:
                 raise RuleError("Baseline topology is locked after intervention or verdict")
             if self.pacing_seconds is not None and self.public:
@@ -215,6 +307,10 @@ class Game:
             self.audit.append(self._event("configure", links=dict(self.links)))
             return
         if action in ("intervene", "random_intervene"):
+            if self.pilot_mode:
+                if (action != "intervene" or self._pilot_phase() != "transition"
+                        or self._question_count() != self.PILOT_BASELINE):
+                    raise RuleError("Pilot requires a scheduled, explicit intervention after exactly two answers")
             if self.intervened or self.revealed or self.verdict is not None:
                 raise RuleError("Only one hidden intervention is allowed before a verdict")
             if self.pacing_seconds is not None and self.pending_release is not None:
@@ -229,6 +325,16 @@ class Game:
             gateway = data.get("human_gateway", False)
             if type(gateway) is not bool:
                 raise RuleError("human_gateway must be a boolean")
+            if self.pilot_mode:
+                if links not in (
+                    {"A_to_B": True, "B_to_A": True},
+                    {"A_to_B": False, "B_to_A": False},
+                ):
+                    raise RuleError("Pilot link factor must be fully ON or fully OFF")
+                link_on = links["A_to_B"]
+                expected_gateway = condition in ("humanA", "humanB") and link_on
+                if gateway != expected_gateway:
+                    raise RuleError("Pilot human gateway must match the preregistered link condition")
             if gateway and condition not in ("humanA", "humanB"):
                 if randomized:
                     gateway = False
@@ -274,6 +380,16 @@ class Game:
             if self.verdict is not None:
                 raise RuleError("Verdict is locked; no more questions")
             channel = self._channel(data)
+            if self.pilot_mode:
+                n = self._question_count()
+                if n >= self.PILOT_TOTAL_QUESTIONS:
+                    raise RuleError("Pilot question budget exhausted")
+                if n == 0 and channel != "A":
+                    raise RuleError("Pilot baseline starts with A")
+                if n == 1 and channel != "B":
+                    raise RuleError("Pilot baseline continues with B")
+                if n >= self.PILOT_BASELINE and not self.pilot_resumed:
+                    raise RuleError("Pilot awaits the public continuation marker")
             body = self._text(data)
             if self.pacing_seconds is not None and self.pending_release is not None:
                 raise RuleError("Await the fixed response release boundary")
@@ -288,6 +404,13 @@ class Game:
                 }
             return
         if action == "verdict":
+            if self.pilot_mode and (
+                not self.pilot_resumed or self._question_count() != self.PILOT_TOTAL_QUESTIONS
+                or self.pending_release is not None
+                or sum(e["kind"] in ("answer", "timeout") for e in self.public)
+                    != self.PILOT_TOTAL_QUESTIONS
+            ):
+                raise RuleError("Pilot verdict requires eight resolved questions and public continuation")
             if self.pacing_seconds is not None and self.pending_release is not None:
                 raise RuleError("Await the fixed response release boundary")
             if self.verdict is not None or not self._baseline_ready():
@@ -354,6 +477,8 @@ class Game:
             raise RuleError("Invalid request")
         with self.lock:
             self._settle_due()
+            if self.pilot_aborted and role != "controller":
+                raise RuleError("Pilot is aborted; no further player actions")
             if role == "controller":
                 self._post_controller(action, data)
             elif role == "conductor":
@@ -370,6 +495,13 @@ class Game:
                     "condition": self.condition, "active": dict(self.active),
                     "links": dict(self.links), "human_gateway": self.human_gateway,
                     "baseline_ready": self._baseline_ready(),
+                    "pilot_enabled": self.pilot_mode,
+                    "pilot_phase": self._pilot_phase(),
+                    "pilot_resumed": self.pilot_resumed,
+                    "pilot_aborted": self.pilot_aborted,
+                    "pilot_abort_reason": self.pilot_abort_reason,
+                    "pilot_valid_for_primary": self._pilot_valid(),
+                    "pilot_question_count": self._question_count(),
                     "revealed": self.revealed, "verdict": self.verdict,
                     "score": self._score(),
                     "pacing_seconds": self.pacing_seconds,
@@ -389,6 +521,7 @@ class Game:
                 # private transcript before the controller's explicit reveal.
                 return {
                     "role": "conductor", "public": self._project(self.public),
+                    "pilot_phase": self._pilot_phase(),
                     "verdict": self.verdict,
                     "revealed": self.revealed,
                     "outcome": ({"condition": self.condition,
@@ -420,4 +553,4 @@ class Game:
     def export(self):
         """Controller-only export, with no participant access tokens."""
         result = self.view("controller")
-        return {"schema": "reverse-turing-trial/v0", **result}
+        return {"schema": "reverse-turing-trial/v1", **result}
