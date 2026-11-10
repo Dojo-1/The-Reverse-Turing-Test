@@ -41,9 +41,12 @@ def endpoint_url(url: str, *, relay: bool) -> str:
         raise AdapterError("Expected an http(s) endpoint")
     if parsed.username or parsed.password or parsed.query or parsed.fragment:
         raise AdapterError("Do not embed credentials, queries, or fragments in endpoint URLs")
-    if not parsed.port and ":" in parsed.netloc and parsed.netloc.count(":") == 1:
-        # Optional explicit ports are allowed, malformed ports are not.
-        raise AdapterError("Invalid endpoint port")
+    try:
+        port = parsed.port
+    except ValueError:
+        raise AdapterError("Invalid endpoint port") from None
+    if port == 0:
+        raise AdapterError("Endpoint port cannot be zero")
     local = parsed.hostname.lower() in ("localhost", "127.0.0.1", "::1")
     if relay:
         if not local:
