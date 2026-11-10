@@ -553,4 +553,5 @@ class Game:
     def export(self):
         """Controller-only export, with no participant access tokens."""
         result = self.view("controller")
-        return {"schema": "reverse-turing-trial/v1", **result}
+        return {"schema": ("reverse-turing-trial/v1" if self.pilot_mode
+                           else "reverse-turing-trial/v0"), **result}
