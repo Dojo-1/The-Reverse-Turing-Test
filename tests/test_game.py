@@ -236,5 +236,67 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(self.request("GET", "/api/view", "conductor")[1]["role"], "conductor")
 
 
+class HttpRoundTripTests(unittest.TestCase):
+    def test_human_b_hidden_from_conductor_until_reveal(self):
+        game = Game()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), handler_factory(game))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        url = "http://127.0.0.1:" + str(server.server_port)
+
+        def invoke(role, action, **payload):
+            data = json.dumps({"action": action, **payload}).encode("utf-8")
+            req = Request(url + "/api/act", data=data,
+                          headers={"Authorization": "Bearer " + game.tokens[role],
+                                   "Content-Type": "application/json"}, method="POST")
+            try:
+                with urlopen(req, timeout=5) as response:
+                    return response.status
+            except HTTPError as error:
+                return error.code
+
+        def view(role):
+            req = Request(url + "/api/view", headers={
+                "Authorization": "Bearer " + game.tokens[role]
+            })
+            with urlopen(req, timeout=5) as response:
+                return json.loads(response.read())
+
+        try:
+            for side in ("A", "B"):
+                self.assertEqual(invoke("conductor", "ask", channel=side, body="Are you a machine?"), 200)
+                self.assertEqual(invoke("machine_" + side, "answer", body="Machine role " + side), 200)
+            self.assertEqual(invoke("controller", "configure",
+                                    links={"A_to_B": True, "B_to_A": False}), 200)
+            self.assertEqual(invoke("machine_A", "whisper", body="private nonce"), 200)
+            conductor = view("conductor")
+            self.assertNotIn("private", conductor)
+            self.assertNotIn("nonce", json.dumps(conductor))
+            self.assertEqual(invoke("controller", "intervene", condition="humanB",
+                                    links={"A_to_B": False, "B_to_A": False}), 200)
+            human = view("human")
+            self.assertTrue(human["active"])
+            self.assertEqual(human["channel"], "B")
+            self.assertNotIn("private nonce", json.dumps(human))
+            self.assertEqual(invoke("machine_B", "answer", body="ex-participant"), 400)
+            self.assertEqual(invoke("human", "answer", body="Still machine B"), 200)
+            conductor = view("conductor")
+            self.assertEqual(conductor["public"][-1]["speaker"], "B")
+            self.assertNotIn("condition", conductor)
+            self.assertNotIn("humanB", json.dumps(conductor))
+            self.assertEqual(invoke("conductor", "verdict", p={
+                "no_human": .2, "human_A": .1, "human_B": .7
+            }, evidence="Based only on public dialogue"), 200)
+            self.assertIsNone(view("conductor")["outcome"])
+            self.assertEqual(invoke("controller", "reveal"), 200)
+            revealed = view("conductor")
+            self.assertEqual(revealed["outcome"]["condition"], "humanB")
+            self.assertAlmostEqual(revealed["outcome"]["score"]["brier"], .14)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=3)
+
+
 if __name__ == "__main__":
     unittest.main()
