@@ -85,7 +85,7 @@ function buildController(v) {
     "<label class='checkline'><input id='swap-ab' type='checkbox'>A → B link after intervention</label>",
     "<label class='checkline'><input id='swap-ba' type='checkbox'>B → A link after intervention</label>",
     "<label class='checkline'><input id='gateway' type='checkbox'>Human may use permitted gateway</label>",
-    "<button class='btn'>Commit hidden intervention</button></form></div>",
+    "<div class='btn-row'><button class='btn'>Commit chosen condition</button><button class='btn alt' type='button' id='random'>Draw randomly (five states)</button></div></form></div>",
     "<div class='control-group'><h3>03 / Reveal and export</h3>",
     "<p class='small'>C must lock a verdict before you reveal the answer.</p>",
     "<div class='btn-row'><button class='btn warn' id='reveal'>Reveal outcome</button>",
@@ -103,7 +103,13 @@ function buildController(v) {
   }
   document.getElementById("configure").onsubmit = e => {
     e.preventDefault();
-    act("configure", { links: links("base") });
+    const choice = links("base");
+    act("configure", { links: choice }).then(ok => {
+      if (ok && document.getElementById("swap-ab")) {
+        document.getElementById("swap-ab").checked = choice.A_to_B;
+        document.getElementById("swap-ba").checked = choice.B_to_A;
+      }
+    });
   };
   document.getElementById("intervene").onsubmit = e => {
     e.preventDefault();
@@ -112,6 +118,9 @@ function buildController(v) {
       links: links("swap"), human_gateway: checked("gateway")
     });
   };
+  document.getElementById("random").onclick = () => act("random_intervene", {
+    links: links("swap"), human_gateway: checked("gateway")
+  });
   document.getElementById("reveal").onclick = () => act("reveal", {});
   document.getElementById("export").onclick = async () => {
     try {
