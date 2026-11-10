@@ -259,10 +259,11 @@ function render(v) {
     root.dataset.pilotEnabled = String(!!v.pilot_enabled);
     document.getElementById("phase").textContent = v.pilot_enabled
       ? ("RTT-PILOT/1 · " + v.pilot_phase.toUpperCase() + " · " +
-         v.pilot_question_count + "/8 questions")
+         v.pilot_question_count + "/8 questions" +
+         (v.intervened ? " · CTRL ONLY — " + v.condition : ""))
       : v.revealed ? "REVEALED · trial closed" :
-      v.verdict ? "VERDICT LOCKED · ready to reveal" :
-      v.intervened ? "SECRET INTERVENTION COMMITTED" :
+      v.verdict ? ("VERDICT LOCKED · " + v.condition + " · ready to reveal") :
+      v.intervened ? ("CTRL ONLY · SECRET STATE: " + v.condition) :
       v.baseline_ready ? "BASELINE READY · make your move" :
       "BASELINE · obtain one answer each from A and B";
     const paced = v.pacing_seconds !== null;

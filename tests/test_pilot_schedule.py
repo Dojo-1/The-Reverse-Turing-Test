@@ -1,6 +1,7 @@
 """Independent invariants for the proposed (NOT executed) pilot schedule."""
 from collections import Counter
 import json
+import os
 from pathlib import Path
 import stat
 import tempfile
@@ -54,7 +55,8 @@ class PilotScheduleTests(unittest.TestCase):
             public = Path(directory) / "commitment.json"
             exclusive_json(private, record, 0o600)
             exclusive_json(public, public_commitment(record), 0o644)
-            self.assertEqual(stat.S_IMODE(private.stat().st_mode), 0o600)
+            if os.name == "posix":
+                self.assertEqual(stat.S_IMODE(private.stat().st_mode), 0o600)
             self.assertEqual(json.loads(private.read_text())["seed"], self.seed)
             self.assertNotIn(self.seed, public.read_text())
             with self.assertRaises(FileExistsError):

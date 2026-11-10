@@ -6,6 +6,7 @@ The reference fixture is constructed independently of Game._event.
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import stat
 import tempfile
@@ -231,7 +232,8 @@ class AnalysisTests(unittest.TestCase):
                     "--records-dir", str(inputs),
                     "--output", str(report)]
             self.assertEqual(main(args), 0)
-            self.assertEqual(stat.S_IMODE(report.stat().st_mode), 0o600)
+            if os.name == "posix":
+                self.assertEqual(stat.S_IMODE(report.stat().st_mode), 0o600)
             self.assertEqual(json.loads(report.read_text())["n_valid"], 24)
             self.assertEqual(main(args), 2)
 

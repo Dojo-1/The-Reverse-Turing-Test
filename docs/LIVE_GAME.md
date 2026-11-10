@@ -77,3 +77,9 @@ The default open game remains free-form. To use the proposed precommitted 24-tri
 For detailed play see [STRICT_PILOT.md](STRICT_PILOT.md); start the read-only independent-process timing sidecar using [OBSERVER.md](OBSERVER.md). The sidecar has its own credential and sees no hidden intervention metadata.
 
 **Caution:** the current app does not automatically verify that the controller selected the correct assigned trial row; an independent host must reconcile controller exports with the private committed schedule. The observer measures its own first HTTP receipt, not C's actual receipt.
+
+## R7 — Private-link fairness
+
+The current respondent view filters private messages by the **currently enabled directed link**, not merely by machine identity. After a swap with both links OFF, neither a replacement machine nor a human receives baseline private messages through the API. When links are ON and the human gateway is authorized, human and machine replacements inherit the same permitted channel-history view. This does not clear prior external provider memory.
+
+Automated models can now **send** private text using `--private-handoff`. It requests the same two-field model response in both ON and OFF conditions, but only ON sends the private note. Existing manual web controls also let authorized players send text. The controller should verify actual messages in its private audit; `link ON` alone does not demonstrate an active side channel.

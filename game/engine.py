@@ -539,9 +539,18 @@ class Game:
             if channel is None:
                 return {"role": "respondent", "active": False, "channel": None,
                         "public": [], "private": [], "revealed": self.revealed}
+            # Private channel history is readable only while its directed
+            # link remains active. In particular, a replacement machine must
+            # not inherit prior baseline whispers in the link-OFF condition
+            # while a matched human-without-gateway sees an empty inbox.
+            # Links ON expose channel history equally to authorized humans
+            # and replacement machines; underlying model memory is external.
             private = [
                 item for item in self.private
-                if item["from_channel"] == channel or item["to_channel"] == channel
+                if (self.links["A_to_B"]
+                    if item["from_channel"] == "A" else self.links["B_to_A"])
+                and (item["from_channel"] == channel
+                     or item["to_channel"] == channel)
             ] if self._allows_link(role) else []
             return {
                 "role": "respondent", "active": True, "channel": channel,

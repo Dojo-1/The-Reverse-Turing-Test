@@ -3,6 +3,7 @@
 No test here is an independent human observation or C-receipt measurement.
 """
 import json
+import os
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 import stat
@@ -94,7 +95,8 @@ class WitnessTests(unittest.TestCase):
             name = Path(tmp) / "witness.jsonl"
             with create_private_record(name) as f:
                 write_record(f, {"type": "test", "public": "none"})
-            self.assertEqual(stat.S_IMODE(name.stat().st_mode), 0o600)
+            if os.name == "posix":
+                self.assertEqual(stat.S_IMODE(name.stat().st_mode), 0o600)
             self.assertEqual(json.loads(name.read_text().splitlines()[0])["type"], "test")
             with self.assertRaises(AdapterError):
                 create_private_record(name)
