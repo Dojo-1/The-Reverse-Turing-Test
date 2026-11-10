@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import math
 import secrets
+import time
 from threading import RLock
 
 
@@ -24,7 +25,7 @@ class Game:
     HYPOTHESES = ("no_human", "human_A", "human_B")
     MAX_TEXT = 2000
 
-    def __init__(self):
+    def __init__(self, *, clock=None):
         self.tokens = {role: secrets.token_urlsafe(32) for role in self.ROLES}
         self.token_to_role = {token: role for role, token in self.tokens.items()}
         self.active = {"A": "machine_A", "B": "machine_B"}
@@ -39,6 +40,10 @@ class Game:
         self.audit = []
         self.sequence = 0
         self.lock = RLock()
+        self._clock = clock if clock is not None else time.monotonic
+        self.pacing_seconds = None
+        self.pending_release = None
+        self.timing_violations = []
 
     def identify(self, token):
         if not isinstance(token, str) or token not in self.token_to_role:
@@ -99,6 +104,41 @@ class Game:
             for index, event in enumerate(events, start=1)
         ]
 
+    def _settle_due(self):
+        """Publish a buffered answer (or a neutral timeout) at its fixed gate.
+
+        Called by view/act under the same lock. Publication depends only on
+        the clock and the publicly issued question, not on the time at which
+        the respondent finished. A late/missing answer invalidates the
+        controlled trial; it is not silently filled with a machine response.
+        """
+        pending = self.pending_release
+        if pending is None:
+            return
+        now = self._clock()
+        if now < pending["due"]:
+            return
+        self.pending_release = None
+        submitted = pending["answer"] is not None
+        body = pending["answer"] if submitted else "[NO RESPONSE BY DEADLINE]"
+        self.public.append(self._event(
+            "answer", channel=pending["channel"],
+            speaker=pending["channel"], body=body,
+        ))
+        if not submitted:
+            self.timing_violations.append({
+                "question_sequence": pending["question_sequence"],
+                "channel": pending["channel"], "reason": "deadline_miss",
+            })
+        self.audit.append(self._event(
+            "paced_release", question_sequence=pending["question_sequence"],
+            channel=pending["channel"], submitted=submitted,
+            gate_seconds=self.pacing_seconds,
+            released_at_monotonic=now,
+            nominal_due_monotonic=pending["due"],
+            submission_at_monotonic=pending["submitted_at"],
+        ))
+
     def _active_channel(self, role):
         for channel, active_role in self.active.items():
             if active_role == role:
@@ -143,6 +183,18 @@ class Game:
         }
 
     def _post_controller(self, action, data):
+        if action == "configure_pacing":
+            if self.public or self.intervened or self.revealed or self.verdict:
+                raise RuleError("Pacing must be configured before first public question")
+            seconds = data.get("seconds")
+            if (type(seconds) not in (int, float)
+                    or not math.isfinite(seconds) or not 1 <= seconds <= 600):
+                raise RuleError("Pacing seconds must be finite, between 1 and 600")
+            if self.pacing_seconds is not None:
+                raise RuleError("Pacing cannot be reconfigured within one trial")
+            self.pacing_seconds = float(seconds)
+            self.audit.append(self._event("configure_pacing", seconds=self.pacing_seconds))
+            return
         if action == "configure":
             if self.intervened or self.revealed or self.verdict is not None:
                 raise RuleError("Baseline topology is locked after intervention or verdict")
@@ -207,9 +259,22 @@ class Game:
             if self.verdict is not None:
                 raise RuleError("Verdict is locked; no more questions")
             channel = self._channel(data)
-            self.public.append(self._event("question", channel=channel, speaker="C", body=self._text(data)))
+            body = self._text(data)
+            if self.pacing_seconds is not None and self.pending_release is not None:
+                raise RuleError("Await the fixed response release boundary")
+            question = self._event("question", channel=channel, speaker="C", body=body)
+            self.public.append(question)
+            if self.pacing_seconds is not None:
+                self.pending_release = {
+                    "channel": channel,
+                    "question_sequence": question["sequence"],
+                    "due": self._clock() + self.pacing_seconds,
+                    "answer": None, "submitted_at": None,
+                }
             return
         if action == "verdict":
+            if self.pacing_seconds is not None and self.pending_release is not None:
+                raise RuleError("Await the fixed response release boundary")
             if self.verdict is not None or not self._baseline_ready():
                 raise RuleError("Verdict already locked or baseline incomplete")
             raw = data.get("p")
@@ -239,7 +304,22 @@ class Game:
         if channel is None:
             raise RuleError("This participant is not currently active")
         if action == "answer":
-            self.public.append(self._event("answer", channel=channel, speaker=channel, body=self._text(data)))
+            body = self._text(data)
+            if self.pacing_seconds is not None:
+                pending = self.pending_release
+                if pending is None or pending["channel"] != channel:
+                    raise RuleError("No eligible pending question for this channel")
+                if pending["answer"] is not None:
+                    raise RuleError("Response is already buffered for the release boundary")
+                pending["answer"] = body
+                pending["submitted_at"] = self._clock()
+                self.audit.append(self._event(
+                    "paced_submission", channel=channel,
+                    question_sequence=pending["question_sequence"],
+                    accepted_at_monotonic=pending["submitted_at"],
+                ))
+            else:
+                self.public.append(self._event("answer", channel=channel, speaker=channel, body=body))
             return
         if action == "whisper":
             if not self._allows_link(role):
@@ -258,6 +338,7 @@ class Game:
         if not isinstance(data, dict) or not isinstance(action, str):
             raise RuleError("Invalid request")
         with self.lock:
+            self._settle_due()
             if role == "controller":
                 self._post_controller(action, data)
             elif role == "conductor":
@@ -267,6 +348,7 @@ class Game:
 
     def view(self, role):
         with self.lock:
+            self._settle_due()
             if role == "controller":
                 return {
                     "role": "controller", "intervened": self.intervened,
@@ -275,6 +357,14 @@ class Game:
                     "baseline_ready": self._baseline_ready(),
                     "revealed": self.revealed, "verdict": self.verdict,
                     "score": self._score(),
+                    "pacing_seconds": self.pacing_seconds,
+                    "pending_gate": (None if self.pending_release is None else {
+                        "channel": self.pending_release["channel"],
+                        "response_buffered": self.pending_release["answer"] is not None,
+                        "seconds_remaining": max(
+                            0.0, self.pending_release["due"] - self._clock()),
+                    }),
+                    "timing_violations": list(self.timing_violations),
                     "public": list(self.public), "private": list(self.private),
                     "audit": list(self.audit),
                 }
@@ -302,6 +392,10 @@ class Game:
                 "public": self._project([event for event in self.public if event["channel"] == channel]),
                 "private": self._project(private, private=True), "revealed": self.revealed,
                 "locked": self.verdict is not None,
+                "awaiting_release": (
+                    self.pending_release is not None
+                    and self.pending_release["channel"] == channel
+                    and self.pending_release["answer"] is not None),
                 "can_whisper": self._allows_link(role) and self.links[
                     "A_to_B" if channel == "A" else "B_to_A"
                 ],
