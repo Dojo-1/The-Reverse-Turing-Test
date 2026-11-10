@@ -70,13 +70,24 @@ class Game:
 
 
     @staticmethod
-    def _project(events):
-        """Project allowed transcript fields only, with dense local indices.
+    def _project(events, *, private=False):
+        """Whitelist projected fields and reindex in the authorized view.
 
-        Never return internal sequence numbers, timestamps, controller fields,
-        or future metadata added to the internal event schema. This removes
-        stored timestamp disclosure, NOT real-time delivery-latency leakage.
+        Public events and private handoffs use different schemas. Neither
+        projection exposes global sequence, raw timestamps, or extra metadata.
+        Hiding stored timestamps does NOT normalize network/typing latency.
         """
+        if private:
+            return [
+                {
+                    "sequence": index,
+                    "kind": "whisper",
+                    "from_channel": event["from_channel"],
+                    "to_channel": event["to_channel"],
+                    "body": event["body"],
+                }
+                for index, event in enumerate(events, start=1)
+            ]
         return [
             {
                 "sequence": index,
@@ -289,7 +300,7 @@ class Game:
             return {
                 "role": "respondent", "active": True, "channel": channel,
                 "public": self._project([event for event in self.public if event["channel"] == channel]),
-                "private": self._project(private), "revealed": self.revealed,
+                "private": self._project(private, private=True), "revealed": self.revealed,
                 "locked": self.verdict is not None,
                 "can_whisper": self._allows_link(role) and self.links[
                     "A_to_B" if channel == "A" else "B_to_A"
