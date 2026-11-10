@@ -4,6 +4,7 @@ from http.server import ThreadingHTTPServer
 import math
 import threading
 import unittest
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -130,6 +131,22 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(self.game.view("conductor")["outcome"]["condition"], "humanB")
         with self.assertRaises(RuleError):
             self.game.act("machine_A", "answer", {"body": "late"})
+
+    def test_random_hidden_condition_is_uniform_protocol_not_a_public_label(self):
+        baseline(self.game)
+        with patch("game.engine.secrets.choice", return_value="machineB") as draw:
+            self.game.act("controller", "random_intervene", {
+                "links": {"A_to_B": False, "B_to_A": True},
+                "human_gateway": True,
+            })
+        draw.assert_called_once_with(Game.CONDITIONS)
+        self.assertEqual(self.game.condition, "machineB")
+        self.assertFalse(self.game.human_gateway)
+        self.assertTrue(self.game.view("replacement_B")["active"])
+        self.assertEqual(self.game.audit[-1]["selection"], "uniform_five_way")
+        conductor = self.game.view("conductor")
+        for secret in ("selection", "condition", "links", "human_gateway", "intervened"):
+            self.assertNotIn(secret, conductor)
 
     def test_no_human_machine_swap_is_control(self):
         baseline(self.game)
