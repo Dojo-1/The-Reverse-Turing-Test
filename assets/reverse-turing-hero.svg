@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1440" height="560" viewBox="0 0 1440 560" role="img" aria-labelledby="title desc">
+<title id="title">The Reverse Turing Test — Origin is not evidence</title>
+<desc id="desc">A zen-inspired, playful dark editorial banner. On the right, a machine conductor converses with two anonymous endpoints, one of which may secretly become human. A dotted curve indicates an optional private communication channel.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#131529"/><stop offset=".54" stop-color="#20223c"/><stop offset="1" stop-color="#101a2c"/></linearGradient>
+  <radialGradient id="haze"><stop offset="0" stop-color="#937bf9" stop-opacity=".28"/><stop offset="1" stop-color="#937bf9" stop-opacity="0"/></radialGradient>
+  <linearGradient id="moon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7dbd2"/><stop offset=".48" stop-color="#fbd3c6"/><stop offset="1" stop-color="#bbaaff"/></linearGradient>
+  <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#98ffdc"/><stop offset="1" stop-color="#b4a0ff"/></linearGradient>
+  <filter id="blur"><feGaussianBlur stdDeviation="28"/></filter>
+  <filter id="shadow" x="-40%" y="-60%" width="180%" height="220%"><feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#01050d" flood-opacity=".37"/></filter>
+  <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".8" fill="#cbb7ff" opacity=".22"/></pattern>
+</defs>
+<rect width="1440" height="560" rx="28" fill="url(#bg)"/>
+<circle cx="1160" cy="258" r="300" fill="url(#haze)"/>
+<path d="M0 442 C255 415 370 486 605 448 S935 427 1440 480" fill="none" stroke="#c9baff" stroke-opacity=".10" stroke-width="1.2"/>
+<path d="M0 466 C270 433 385 509 627 475 S960 451 1440 504" fill="none" stroke="#c9baff" stroke-opacity=".10" stroke-width="1.2"/>
+<path d="M0 492 C270 458 385 533 627 500 S960 476 1440 528" fill="none" stroke="#c9baff" stroke-opacity=".10" stroke-width="1.2"/>
+<rect x="22" y="20" width="1396" height="520" rx="23" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="1.5"/>
+<g font-family="Inter, Segoe UI, Arial, sans-serif">
+  <rect x="76" y="63" width="278" height="37" rx="18.5" fill="#c1b6ff" fill-opacity=".13" stroke="#c4b6ff" stroke-opacity=".47"/>
+  <circle cx="97" cy="82" r="5" fill="#9cffd5"/>
+  <text x="114" y="87" fill="#dad4ff" font-size="15" letter-spacing="2.2" font-weight="700">DOJO / RESEARCH GAME</text>
+  <text x="70" y="216" fill="#fffaf6" font-size="95" font-weight="850" letter-spacing="-4.5">The Reverse</text>
+  <text x="70" y="312" fill="#fffaf6" font-size="95" font-weight="850" letter-spacing="-4.5">Turing Test</text>
+  <text x="76" y="367" fill="#e3dff4" font-size="25" font-weight="400">Can a human convince a machine</text>
+  <text x="76" y="402" fill="#e3dff4" font-size="25" font-weight="400">that it is another machine?</text>
+  <line x1="77" y1="445" x2="576" y2="445" stroke="#e6dff3" stroke-opacity=".22"/>
+  <text x="77" y="474" fill="#92f1d4" font-size="15" letter-spacing="2.2" font-weight="600">ORIGIN ≠ SIGNAL ≠ INTELLIGENCE</text>
+</g>
+<!-- Zen moon gate: interrupted concentric brush curves. -->
+<circle cx="1116" cy="260" r="202" fill="url(#moon)" opacity=".94"/>
+<circle cx="1116" cy="260" r="172" fill="#20223b"/>
+<circle cx="1116" cy="260" r="198" fill="none" stroke="#fff2e2" stroke-opacity=".40" stroke-width="3"/>
+<circle cx="1116" cy="260" r="183" fill="none" stroke="#f6bcae" stroke-opacity=".72" stroke-width="8" stroke-dasharray="820 84 78 180" stroke-linecap="round" transform="rotate(-27 1116 260)"/>
+<circle cx="1116" cy="260" r="157" fill="none" stroke="#c8b8ff" stroke-opacity=".30" stroke-width="1.5" stroke-dasharray="3 11"/>
+<path d="M905 371 Q1116 421 1325 371" fill="none" stroke="#e4d9ff" stroke-opacity=".16" stroke-width="2"/>
+<!-- conductor -->
+<g filter="url(#shadow)">
+  <circle cx="1116" cy="151" r="57" fill="#2e3151" stroke="#b4a4ff" stroke-width="3"/>
+  <rect x="1086" y="138" width="60" height="31" rx="16" fill="#111725" stroke="#a9fff0" stroke-width="1.5"/>
+  <path d="M1098 152 Q1105 160 1112 152 M1120 152 Q1127 160 1134 152" fill="none" stroke="#9cf4d5" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="1116" cy="107" r="5" fill="#abffde"/>
+</g>
+<!-- answer lines -->
+<path d="M1073 197 C1027 211 1010 248 1001 278" fill="none" stroke="#e8e0ff" stroke-width="3" stroke-linecap="round" opacity=".80"/>
+<path d="M1159 197 C1209 212 1231 249 1240 277" fill="none" stroke="#e8e0ff" stroke-width="3" stroke-linecap="round" opacity=".80"/>
+<path d="M995 270 l5 10 8 -8 M1230 269 l10 10 5 -10" fill="none" stroke="#e8e0ff" stroke-width="3" stroke-linecap="round"/>
+<!-- endpoint A -->
+<g filter="url(#shadow)">
+  <rect x="912" y="286" width="170" height="103" rx="30" fill="#30384e" stroke="#9bf6d8" stroke-width="2.5"/>
+  <rect x="952" y="305" width="92" height="42" rx="20" fill="#101b27"/>
+  <circle cx="982" cy="326" r="5" fill="#a3ffdd"/><circle cx="1012" cy="326" r="5" fill="#a3ffdd"/>
+  <text x="998" y="370" text-anchor="middle" fill="#d6fff0" font-family="Inter, Segoe UI, Arial" font-size="15" letter-spacing="2">A / 01</text>
+</g>
+<!-- endpoint B, masked human-or-machine -->
+<g filter="url(#shadow)">
+  <rect x="1150" y="286" width="170" height="103" rx="30" fill="#35324c" stroke="#ffceb3" stroke-width="2.5"/>
+  <circle cx="1235" cy="325" r="24" fill="none" stroke="#ffceb3" stroke-width="3" stroke-dasharray="20 8"/>
+  <text x="1235" y="337" text-anchor="middle" fill="#ffe2d0" font-family="Georgia, serif" font-size="37">?</text>
+  <text x="1235" y="370" text-anchor="middle" fill="#ffe2d0" font-family="Inter, Segoe UI, Arial" font-size="15" letter-spacing="2">B / ??</text>
+</g>
+<!-- latent side channel -->
+<path d="M1087 338 Q1116 404 1145 338" fill="none" stroke="url(#glow)" stroke-width="4" stroke-dasharray="2 11" stroke-linecap="round"/>
+<circle cx="1116" cy="374" r="7" fill="#bcaaff" stroke="#dcfff7" stroke-width="2"/>
+<g font-family="Inter, Segoe UI, Arial, sans-serif" text-anchor="middle">
+<text x="1116" y="457" fill="#f8f1ff" font-size="16" letter-spacing="2">WHO IS BEHIND B?</text>
+<text x="1116" y="483" fill="#ccbdf7" font-size="13" letter-spacing="1.5">WORDS / HIDDEN CHANNELS / DOUBT</text>
+</g>
+<!-- Floating accents -->
+<circle cx="847" cy="96" r="3" fill="#b2fbe5"/><circle cx="1357" cy="153" r="4" fill="#ffc5ad"/>
+<path d="M836 155 l8 -14 8 14 -8 14z" fill="none" stroke="#b3aaff" stroke-width="1.8"/>
+<path d="M1366 360 l9 -15 9 15 -9 15z" fill="none" stroke="#f0cdbf" stroke-width="1.8"/>
+<rect x="833" y="64" width="600" height="426" fill="url(#dots)" opacity=".21"/>
+</svg>
