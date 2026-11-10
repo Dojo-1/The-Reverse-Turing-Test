@@ -20,15 +20,18 @@ from .agents import AdapterError, RelayClient
 class Witness:
     """Stateful first-observation intervals for an explicitly public view."""
 
-    def __init__(self, *, require_empty_start=True):
+    def __init__(self, *, require_empty_start=True, expected_role="observer"):
+        if expected_role not in ("observer", "conductor"):
+            raise AdapterError("Witness supports only public observer or conductor views")
+        self.expected_role = expected_role
         self.last_sequence = 0
         self.last_poll_end_ns = None
         self.initialized = False
         self.require_empty_start = require_empty_start
 
     def sample(self, view, *, request_start_ns, response_end_ns, wall_end_ns):
-        if view.get("role") != "observer":
-            raise AdapterError("Witness requires a separate observer credential")
+        if view.get("role") != self.expected_role:
+            raise AdapterError("Witness token does not match its scoped public role")
         events = view.get("public")
         if not isinstance(events, list):
             raise AdapterError("Observer did not receive an event list")

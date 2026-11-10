@@ -147,3 +147,10 @@ This is an **opt-in text-only research probe**. In every answering turn, the mod
 **Reading is now symmetrical:** link OFF hides *all* historical private messages from both replacement machines and human impostors; ON exposes the channel's previously permitted text history to both, provided the human has a gateway. Directional open-game links filter each message by its **current** direction. Private content already absorbed into a persistent external model or human memory cannot be revoked by this software projection. The controller's private audit retains all messages and the conductor sees none of them.
 
 A human with an authorized gateway can manually receive and send private text in the browser; the CLI never automates the human. If no actor actually sends messages, link ON is merely an **available affordance**, not a communication treatment. Record actual traffic and failure to use the channel before discussing missing-link effects. No real KV sharing is implemented.
+
+
+## R8 — The actual conductor client can log first receipt
+
+For an optional timing-controlled machine-conductor session, add `--trial-id RTT-01 --receipt-log private/C-RTT-01.jsonl --poll-seconds 0.1` to C's command. This wraps the same HTTP read used by the model-driving `Agent.step()` call. A separately running observer cannot provide this evidence. Start C **before the first question**; the logger refuses to invent a first-seen time for pre-existing events.
+
+This does not expose receipt metadata to model prompts, attest the same OS clock across tunneled hosts, or establish when the provider internally processes the response. See the [conductor-receipt runbook](CONDUCTOR_RECEIPT.md) and use [offline timing check](../experiments/check_conductor_delivery.py) against the controller-only export.
