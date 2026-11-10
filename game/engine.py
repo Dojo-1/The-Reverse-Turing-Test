@@ -24,6 +24,7 @@ class Game:
     CONDITIONS = ("unchanged", "humanA", "humanB", "machineA", "machineB")
     HYPOTHESES = ("no_human", "human_A", "human_B")
     MAX_TEXT = 2000
+    RELEASE_TOLERANCE_SECONDS = 1.0
 
     def __init__(self, *, clock=None):
         self.tokens = {role: secrets.token_urlsafe(32) for role in self.ROLES}
@@ -131,10 +132,19 @@ class Game:
                 "question_sequence": pending["question_sequence"],
                 "channel": pending["channel"], "reason": "deadline_miss",
             })
+        lateness = now - pending["due"]
+        if lateness > self.RELEASE_TOLERANCE_SECONDS:
+            self.timing_violations.append({
+                "question_sequence": pending["question_sequence"],
+                "channel": pending["channel"], "reason": "late_publication",
+                "lateness_seconds": lateness,
+            })
         self.audit.append(self._event(
             "paced_release", question_sequence=pending["question_sequence"],
             channel=pending["channel"], submitted=submitted,
             gate_seconds=self.pacing_seconds,
+            release_tolerance_seconds=self.RELEASE_TOLERANCE_SECONDS,
+            publication_lateness_seconds=lateness,
             released_at_monotonic=now,
             nominal_due_monotonic=pending["due"],
             submission_at_monotonic=pending["submitted_at"],
@@ -363,6 +373,7 @@ class Game:
                     "revealed": self.revealed, "verdict": self.verdict,
                     "score": self._score(),
                     "pacing_seconds": self.pacing_seconds,
+                    "release_tolerance_seconds": self.RELEASE_TOLERANCE_SECONDS,
                     "pending_gate": (None if self.pending_release is None else {
                         "channel": self.pending_release["channel"],
                         "response_buffered": self.pending_release["answer"] is not None,
