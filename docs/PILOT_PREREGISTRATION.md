@@ -112,3 +112,10 @@ This clarification is part of the protocol **before any human/LLM trial**. Previ
 Report **both assignment to link ON/OFF and actual post-intervention private-message traffic**. If link ON carries no messages, a comparison estimates the effect of *offered connectivity*, not actual communication loss; the intended connectivity mechanism has not been engaged. Do not silently promote the latter interpretation. The engine now hides old baseline whispers when a direction is switched OFF, with identical private-history access for human and machine replacements. Historical knowledge already present in human or upstream model state cannot be erased and must be controlled by fresh sessions.
 
 Choosing a software license is unrelated to this pilot's validity. Consent, data handling and direct conductor-side reception timing remain prerequisites to making a real experimental claim.
+
+
+## R8 pre-participant transport instrumentation amendment
+
+A new optional `--receipt-log` on the **actual machine conductor's client** records each successful HTTP poll and public event first received in the `Agent.step()` path. Unlike the read-only R5 observer, this is not a surrogate TCP session. The new offline check reconciles those event hashes and timestamps against controller-only `paced_release` records. The registered tolerance remains **one second**; it is not selected in response to a measured effect.
+
+This **does not** certify clock-domain identity across separate hosts, direct model-internal perception, or independent operator integrity. Use same-host relay and conductor for the proposed instrument calibration, preserve the original controller and C logs, and have an independent human inspect transport and model-state controls. The R6 scientific report remains `confirmatory_ready=false` regardless of a passing software timing check. A failed or missing C trace is evidence of a transport-control gap, never permission to exclude or replace a scheduled trial. No participant experiments preceded this amendment.
