@@ -104,3 +104,11 @@ Trials that abort or miss deadlines remain in the complete 24-row assignment rep
 The previously declared primary estimand and 24-trial sample are unchanged. The [R6 offline analysis](PILOT_ANALYSIS.md) verifies the private seed against the commitment and enumerates **every assigned row**, preserving missingness and invalid runs. It computes the declared machine-control link-OFF minus link-ON quantity, but labels the result **descriptive only** until an independent direct-C timing witness and protocol review are available.
 
 This analysis implementation was developed **before any human/LLM experiment**. Its test fixtures use synthetic known-answer values and must never be counted among the 24 real assignments. Analysis logic must be version-locked before starting participant collection; later corrections must preserve the earlier code and a documented reason for change.
+
+## R7 pre-first-trial private-channel amendment (no data collected)
+
+This clarification is part of the protocol **before any human/LLM trial**. Previous versions treated link availability as if it were active data exchange. The agent now offers an opt-in `--private-handoff` strategy producing a **public answer and private text note in one model call**, and transmitting the note only when a directed link is enabled. For a matched machine-control comparison, pre-register **the same handoff flag on all machine respondent and replacement sessions**, regardless of link state. The human remains an independently instructed human with an optional, authorized manual text gateway.
+
+Report **both assignment to link ON/OFF and actual post-intervention private-message traffic**. If link ON carries no messages, a comparison estimates the effect of *offered connectivity*, not actual communication loss; the intended connectivity mechanism has not been engaged. Do not silently promote the latter interpretation. The engine now hides old baseline whispers when a direction is switched OFF, with identical private-history access for human and machine replacements. Historical knowledge already present in human or upstream model state cannot be erased and must be controlled by fresh sessions.
+
+Choosing a software license is unrelated to this pilot's validity. Consent, data handling and direct conductor-side reception timing remain prerequisites to making a real experimental claim.
