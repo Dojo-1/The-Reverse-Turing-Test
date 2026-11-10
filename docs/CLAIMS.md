@@ -31,3 +31,12 @@
 - **Experimental status:** zero human-versus-machine trials conducted by this development branch. Conductor intelligence, model-to-model shared states, and statistical human detection remain **NOT TESTED**.
 
 Evidence anchor: verify actual R2 PR head and [Actions runs](https://github.com/Dojo-1/The-Reverse-Turing-Test/actions) at review; do not conflate a passing Lean build with runtime security or an independent empirical replication.
+
+
+## R3 — Optional model participants (separate from empirical inference)
+
+- **ARTIFACT:** [game/agents.py](../game/agents.py) provides a stateless, role-scoped conductor/response driver, explicit Chat Completions model transport, a clearly labelled scripted smoke policy, and limits on question count, context events, output length, request sizes and timeouts.
+- **TESTED with local mocks:** [tests/test_agents.py](../tests/test_agents.py) checks that the conductor's model prompt receives only public projected events, respondent prompts receive only their own public events and explicitly permitted private handoffs, and the human role cannot be automated by the supplied CLI. A mock Chat Completions server exercises response parsing, redirect refusal and separation of provider API credentials from the relay credential.
+- **TESTED as an implementation:** loopback relay and scripted-model end-to-end tests, including manual human substitution and a locked verdict. GitHub Actions [run 42884221972](https://github.com/Dojo-1/The-Reverse-Turing-Test/actions/runs/42884221972) passed both Lean and Python/JS jobs with 31 Python tests on commit `9c8d8f57afbd36bc7fb9cd8803d3d8a469b79626`. Revalidate later heads independently.
+- **NOT TESTED:** responses from a real local or remote LLM served over the adapter; measured impersonation success; actual human game sessions; accurate recognition of intelligence; cross-model KV-cache communication; model/provider independence; hostile operator security; statistical generalization.
+- **Limit:** The adapter guarantees only the fields *it sends* to the provider under these tested software paths. It cannot guarantee the external backend's state separation, retention policy, behavior, or lack of side channels. A mock provider is not independent validation of a real provider.
