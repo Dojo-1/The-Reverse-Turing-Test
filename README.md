@@ -21,6 +21,16 @@
 
 ---
 
+### ⌁ R6 / Every observation gets to count
+
+We can now audit future trial exports against the **original 24-row sealed assignment**. Missing trials are visible, impossible scores are challenged, and a machine-only link-OFF versus link-ON comparison is calculated from raw probabilities rather than a convenient story.
+
+There are **no participant results yet**. The numerical examples in the tests are synthetic known answers, not outcomes. The auditor deliberately refuses to call a report confirmatory while conductor receipt timing remains independently unverified.
+
+[**⌁ Inspect the evidence auditor**](experiments/analyze_pilot.py) · [**◇ Audit and analysis manual**](docs/PILOT_ANALYSIS.md) · [**≋ Known-answer tests**](tests/test_pilot_analysis.py)
+
+---
+
 ### ◇ R5 / The experiment remembers its rules
 
 A Turing-style game can remain open-ended while a scientific trial fixes its rules **before** its outcome. The controller can now opt into the structured pilot: exactly **A, B** in the genuine-machine baseline, a private intervention, a public resume signal, then six continuation questions.

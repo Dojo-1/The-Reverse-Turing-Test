@@ -98,3 +98,9 @@ After the private intervention, the controller sends a **public, condition-indep
 The R5 [read-only timing observer](OBSERVER.md) timestamps when it first sees events on a separate HTTP polling connection. It is neither an independent human assessor nor direct measurement of actual C receipt. Therefore, even if `pilot_valid_for_primary=true`, **timing compliance for the primary comparison remains externally unverified** until client-reception measurements and clock calibration are performed.
 
 Trials that abort or miss deadlines remain in the complete 24-row assignment report; their values cannot be quietly imputed or replaced. No inferential or human-detection results are claimed by the implementation.
+
+## R6 pre-observation analysis implementation
+
+The previously declared primary estimand and 24-trial sample are unchanged. The [R6 offline analysis](PILOT_ANALYSIS.md) verifies the private seed against the commitment and enumerates **every assigned row**, preserving missingness and invalid runs. It computes the declared machine-control link-OFF minus link-ON quantity, but labels the result **descriptive only** until an independent direct-C timing witness and protocol review are available.
+
+This analysis implementation was developed **before any human/LLM experiment**. Its test fixtures use synthetic known-answer values and must never be counted among the 24 real assignments. Analysis logic must be version-locked before starting participant collection; later corrections must preserve the earlier code and a documented reason for change.
