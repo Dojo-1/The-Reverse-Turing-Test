@@ -146,10 +146,10 @@ function buildConductor() {
     "</select></label><label>Your question<textarea id='question' maxlength='2000' required></textarea></label>",
     "<button class='btn'>Send question</button></form>",
     "<div class='control-group' id='verdict-wrap'><h3>Lock the probability vector</h3>",
-    "<p class='small'>Do not presume that the controller has intervened.</p>",
+    "<p class='small'>Choose your own probabilities, summing to 1. Do not presume a substitution. A uniform draw over five hidden conditions does not give a uniform prior over these three labels.</p>",
     "<form id='verdict'><div class='grid3'>",
-    "<label>No human<input id='prob-n' type='number' min='0' max='1' step='.01' value='.34' required></label>",
-    "<label>Human A<input id='prob-a' type='number' min='0' max='1' step='.01' value='.33' required></label>",
+    "<label>No human<input id='prob-n' type='number' min='0' max='1' step='.01' placeholder='0–1' required></label>",
+    "<label>Human A<input id='prob-a' type='number' min='0' max='1' step='.01' placeholder='0–1' required></label>",
     "<label>Human B<input id='prob-b' type='number' min='0' max='1' step='.01' value='.33' required></label>",
     "</div><label>Evidence and alternatives<textarea id='evidence' maxlength='2000'></textarea></label>",
     "<button class='btn alt'>Lock verdict</button></form></div><div id='outcome'></div>"
