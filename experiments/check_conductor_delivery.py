@@ -93,9 +93,10 @@ def assess_delivery(controller: dict, trace: list[dict], *,
 
     try:
         public = sorted(public, key=lambda row: row["sequence"])
-        if any(type(e["sequence"]) is not int or
-               e["sequence"] <= 0 for e in public):
-            raise ValueError("invalid public indexes")
+        if (any(type(e["sequence"]) is not int or
+                e["sequence"] <= 0 for e in public)
+                or len({e["sequence"] for e in public}) != len(public)):
+            raise ValueError("invalid or duplicate public event indexes")
         hashes = [_payload_hash(e) for e in public]
     except (KeyError, TypeError, ValueError):
         errors.append("controller_public_payload_invalid")
