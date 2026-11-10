@@ -98,6 +98,12 @@ For additional defense, the prompt builder whitelists `kind`, `speaker`, `channe
 
 **This is software role isolation, not independent attestation**. A local operator, upstream shared state, external provider's cache policy, model nondeterminism, or side-channel timing may violate experimental independence. The code makes no claim of being production-secure.
 
+### Experimental timing warning
+
+Automatic respondents publish an answer immediately after a provider completion. Consequently, even though the R3 event serialization drops raw timestamps, **polling delays and turn arrival times remain visible to C**. The automatic adapter is presently suitable for exploratory gameplay and isolation tests, **not** a timing-controlled confirmatory pilot. For the proposed 24-trial design use paced manual relay or first implement and test a release gate. Record model compute time and provider configurations in the controller-only audit.
+
+See [the proof-to-engine boundary](PROOF_IMPLEMENTATION_BRIDGE.md) and [preregistration](PILOT_PREREGISTRATION.md).
+
 ## 4. Controls and budgets
 
 - `--question-budget N`: maximum total C questions before generating a verdict; N must be at least 2. This is a *trial-specific* parameter, not Turing's universal rule.
