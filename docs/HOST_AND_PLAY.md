@@ -1,5 +1,7 @@
 # Facilitator: run a Reverse Turing Game today
 
+**NEW (R2):** An executable local browser relay is available: [start here](LIVE_GAME.md) with `python -m game.server --port 8765`. The instructions below also work as a fully manual alternative. Neither mode provides actual KV-cache transfer or automatic model API orchestration.
+
 This is a **manual, text-interface protocol**. No live KV translator or autonomous orchestration exists in this repository. The facilitator must implement the information isolation. An honest simulated shared-state channel can be used for a topology-control experiment, but must be identified as simulation.
 
 ## Personnel and equipment
