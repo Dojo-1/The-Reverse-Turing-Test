@@ -113,26 +113,26 @@ class Game:
 
     def _post_controller(self, action, data):
         if action == "configure":
-            if self.intervened or self.revealed:
-                raise RuleError("Baseline topology is locked after intervention")
+            if self.intervened or self.revealed or self.verdict is not None:
+                raise RuleError("Baseline topology is locked after intervention or verdict")
             self._configure_links(data.get("links"))
             self.audit.append(self._event("configure", links=dict(self.links)))
             return
         if action == "intervene":
-            if self.intervened or self.revealed:
-                raise RuleError("Only one hidden intervention is allowed per trial")
+            if self.intervened or self.revealed or self.verdict is not None:
+                raise RuleError("Only one hidden intervention is allowed before a verdict")
             if not self._baseline_ready():
                 raise RuleError("First obtain a genuine answer from both A and B")
             condition = data.get("condition")
             if condition not in self.CONDITIONS:
                 raise RuleError("Unknown hidden intervention")
             links = data.get("links", dict(self.links))
-            self._configure_links(links)
             gateway = data.get("human_gateway", False)
             if type(gateway) is not bool:
                 raise RuleError("human_gateway must be a boolean")
             if gateway and condition not in ("humanA", "humanB"):
                 raise RuleError("Only human substitutions can have a human gateway")
+            self._configure_links(links)
             self.human_gateway = gateway
             if condition == "humanA":
                 self.active["A"] = "human"
@@ -152,8 +152,13 @@ class Game:
             )
             return
         if action == "reveal":
-            if not self.intervened or self.verdict is None or self.revealed:
-                raise RuleError("Reveal requires an intervention and a locked verdict")
+            if self.verdict is None or self.revealed:
+                raise RuleError("Reveal requires a locked verdict")
+            if not self.intervened:
+                self.condition = "unchanged"
+                self.intervened = True
+                self.audit.append(self._event("intervene", condition=self.condition,
+                                              links=dict(self.links), human_gateway=False))
             self.revealed = True
             self.audit.append(self._event("reveal", condition=self.condition))
             return
@@ -169,8 +174,8 @@ class Game:
             self.public.append(self._event("question", channel=channel, speaker="C", body=self._text(data)))
             return
         if action == "verdict":
-            if self.verdict is not None or not self.intervened:
-                raise RuleError("Verdict already locked or no intervention has occurred")
+            if self.verdict is not None or not self._baseline_ready():
+                raise RuleError("Verdict already locked or baseline incomplete")
             raw = data.get("p")
             if not isinstance(raw, dict) or set(raw) != set(self.HYPOTHESES):
                 raise RuleError("Exactly three hypothesis probabilities are required")
