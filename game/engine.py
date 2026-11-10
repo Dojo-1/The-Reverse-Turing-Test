@@ -483,14 +483,35 @@ class Game:
         channel = self._active_channel(role)
         if channel is None:
             raise RuleError("This participant is not currently active")
-        if action == "answer":
+        if action in ("answer", "respond"):
+            # A machine's public answer and optional private text note form
+            # ONE validated server transaction, under Game.lock. The legacy
+            # manual answer/whisper endpoints remain available independently.
+            # Crucially, no private transfer can precede a rejected/late
+            # response when the model uses "respond".
             body = self._text(data)
+            private_note = (
+                self._text({"body": data.get("private_handoff")})
+                if action == "respond" else None
+            )
+            pending = None
             if self.pacing_seconds is not None:
                 pending = self.pending_release
                 if pending is None or pending["channel"] != channel:
                     raise RuleError("No eligible pending question for this channel")
                 if pending["answer"] is not None:
                     raise RuleError("Response is already buffered for the release boundary")
+            transmit = False
+            if private_note is not None:
+                direction = "A_to_B" if channel == "A" else "B_to_A"
+                transmit = self._allows_link(role) and self.links[direction]
+                if transmit:
+                    self.private.append(self._event(
+                        "whisper", from_channel=channel,
+                        to_channel="B" if channel == "A" else "A",
+                        body=private_note,
+                    ))
+            if pending is not None:
                 pending["answer"] = body
                 pending["submitted_at"] = self._clock()
                 self.audit.append(self._event(
@@ -499,7 +520,18 @@ class Game:
                     accepted_at_monotonic=pending["submitted_at"],
                 ))
             else:
-                self.public.append(self._event("answer", channel=channel, speaker=channel, body=body))
+                self.public.append(self._event(
+                    "answer", channel=channel, speaker=channel, body=body,
+                ))
+            if private_note is not None:
+                self.audit.append(self._event(
+                    "atomic_response", channel=channel,
+                    private_transmitted=transmit,
+                    private_discarded=not transmit,
+                    question_sequence=(
+                        pending["question_sequence"] if pending is not None else None
+                    ),
+                ))
             return
         if action == "whisper":
             if not self._allows_link(role):
