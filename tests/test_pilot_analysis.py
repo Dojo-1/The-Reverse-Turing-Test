@@ -235,6 +235,23 @@ class AnalysisTests(unittest.TestCase):
             self.assertEqual(json.loads(report.read_text())["n_valid"], 24)
             self.assertEqual(main(args), 2)
 
+    def test_malformed_public_and_witness_entries_fail_as_auditable_errors(self):
+        plan, records = full_synthetic_data()
+        row = plan["trials"][0]
+        reference = records[row["trial_id"]]
+        broken_public = copy.deepcopy(reference)
+        broken_public["public"].append(None)
+        self.assertIn(
+            "malformed_event_entry",
+            audit_trial(row, broken_public)["errors"]
+        )
+        broken_witness = reference_witness(row, reference)
+        broken_witness.append("not-a-witness-object")
+        self.assertIn(
+            "witness_malformed_entry",
+            audit_trial(row, reference, broken_witness)["errors"]
+        )
+
     def test_unexpected_extra_trial_file_is_not_silently_ignored(self):
         plan, records = full_synthetic_data()
         records["RTT-99"] = records["RTT-01"]
