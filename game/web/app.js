@@ -72,8 +72,8 @@ function buildController(v) {
     "<h2>Hold the secret.</h2><p>You control the intervention. Do not expose it to C.</p>",
     "<div id='phase' class='status'></div>",
     "<div class='control-group'><h3>00 / Strict pilot (optional)</h3>",
-    "<p class='small'>RTT-PILOT/1 locks the 45-second gate and a fixed two-question baseline followed by six continuation questions. Use the secret, committed 24-trial schedule; do not use a fresh random draw.</p>",
-    "<button class='btn alt' type='button' id='enable-pilot'>Enable strict pilot</button>",
+    "<p class='small'>For a real assigned pilot, first run the controller-only schedule binder in a private terminal. This page can also start an UNBOUND rehearsal, which the evidence auditor will reject as study data.</p>",
+    "<button class='btn alt' type='button' id='enable-pilot'>Start unbound rehearsal</button>",
     "<div id='pilot-control' class='status'></div>",
     "<button class='btn hidden' type='button' id='resume-pilot'>Publish continuation marker</button>",
     "<form id='abort-pilot' class='hidden'>",
@@ -272,7 +272,12 @@ function render(v) {
       pilot || paced || v.public.length > 0 || v.intervened || !!v.verdict);
     document.getElementById("pilot-control").textContent = pilot
       ? ("STRICT PILOT: " + v.pilot_phase +
-         " · fixed 45s gate · no random assignment" +
+         " · 45s fixed gate · " +
+         (v.pilot_schedule_bound
+           ? ("SEALED " + v.pilot_trial_id + " · " +
+              v.pilot_assignment.condition + " · LINK " +
+              v.pilot_assignment.link_after.toUpperCase())
+           : "UNBOUND REHEARSAL — NOT VALID STUDY DATA") +
          (v.pilot_aborted ? " · ABORTED: " + v.pilot_abort_reason : "") +
          (v.timing_violations.length ? " · INVALID TIMING" : ""))
       : "Open game: no fixed phase or mandatory question count.";
@@ -296,6 +301,17 @@ function render(v) {
       (pilot && v.pilot_phase !== "transition"));
     document.getElementById("random").classList.toggle("hidden", pilot);
     document.getElementById("gateway").disabled = pilot;
+    const bound = pilot && v.pilot_schedule_bound && v.pilot_assignment;
+    const chosen = document.getElementById("condition");
+    chosen.disabled = !!bound;
+    if (bound) {
+      chosen.value = v.pilot_assignment.condition;
+      const linkOn = v.pilot_assignment.link_after === "on";
+      for (const id of ["swap-ab", "swap-ba"]) {
+        document.getElementById(id).checked = linkOn;
+        document.getElementById(id).disabled = true;
+      }
+    }
     document.getElementById("reveal").disabled = !v.verdict || v.revealed;
     const out = document.getElementById("outcome");
     out.replaceChildren();
@@ -304,7 +320,9 @@ function render(v) {
       "Truth: " + v.condition + " · Brier: " + v.score.brier.toFixed(4)));
     if (pilot && (v.verdict || v.pilot_aborted)) out.append(el(
       "div", "metrics",
-      "Valid for primary analysis: " + (v.pilot_valid_for_primary ? "YES" : "NO")
+      "Local protocol: " + (v.pilot_valid_for_primary ? "COMPLETE" : "INCOMPLETE") +
+      " · allocation: " + (v.pilot_schedule_bound ? "BOUND" : "UNBOUND") +
+      " · external experimental validity: UNVERIFIED"
     ));
     entries("feed", v.public);
     entries("audit", v.private.concat(v.audit.map(a => Object.assign({}, a, {

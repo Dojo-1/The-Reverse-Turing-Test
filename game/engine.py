@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import math
 import secrets
+from hmac import compare_digest
 import time
 from threading import RLock
 
@@ -52,6 +53,8 @@ class Game:
         self.pilot_resumed = False
         self.pilot_aborted = False
         self.pilot_abort_reason = None
+        self.pilot_assignment = None
+        self.pilot_seed_commitment = None
 
     def identify(self, token):
         if not isinstance(token, str) or token not in self.token_to_role:
@@ -240,12 +243,40 @@ class Game:
         )
 
     def _post_controller(self, action, data):
-        if action == "configure_pilot":
+        if action in ("configure_pilot", "configure_pilot_assigned"):
             if (self.pilot_mode or self.public or self.intervened
                     or self.revealed or self.verdict is not None
                     or self.pacing_seconds is not None):
                 raise RuleError("Pilot configuration must precede all interrogation and pacing")
+            assignment = None
+            digest = None
+            if action == "configure_pilot_assigned":
+                # The secret seed is used only to reconstruct one plan row.
+                # Do not store, echo, audit, or expose it to any role.
+                from experiments.pilot_schedule import generate
+                secret_seed = data.get("seed")
+                trial_id = data.get("trial_id")
+                published = data.get("commitment")
+                if (type(trial_id) is not str or
+                        type(published) is not str or
+                        len(published) != 64):
+                    raise RuleError("A committed trial ID and digest are required")
+                try:
+                    plan = generate(secret_seed)
+                except (ValueError, TypeError):
+                    raise RuleError("Invalid sealed pilot seed") from None
+                digest = plan["commitment"]
+                if not compare_digest(digest, published):
+                    raise RuleError("Pilot commitment does not match sealed seed")
+                assignment = next(
+                    (dict(row) for row in plan["trials"]
+                     if row["trial_id"] == trial_id), None
+                )
+                if assignment is None:
+                    raise RuleError("Trial ID is absent from the committed schedule")
             self.pilot_mode = True
+            self.pilot_assignment = assignment
+            self.pilot_seed_commitment = digest
             self.pacing_seconds = self.PILOT_GATE_SECONDS
             self.links = {"A_to_B": True, "B_to_A": True}
             self.audit.append(self._event(
@@ -254,6 +285,9 @@ class Game:
                 continuation_questions=self.PILOT_TOTAL_QUESTIONS - self.PILOT_BASELINE,
                 gate_seconds=self.pacing_seconds,
                 links=dict(self.links),
+                trial_id=assignment["trial_id"] if assignment else None,
+                schedule_commitment=digest,
+                assignment_bound=assignment is not None,
             ))
             return
         if action == "resume_pilot":
@@ -335,6 +369,12 @@ class Game:
                 expected_gateway = condition in ("humanA", "humanB") and link_on
                 if gateway != expected_gateway:
                     raise RuleError("Pilot human gateway must match the preregistered link condition")
+                if self.pilot_assignment is not None:
+                    scheduled = self.pilot_assignment
+                    if (condition != scheduled["condition"] or
+                            ("on" if link_on else "off") != scheduled["link_after"] or
+                            gateway is not scheduled["human_gateway"]):
+                        raise RuleError("Intervention differs from the sealed assigned trial")
             if gateway and condition not in ("humanA", "humanB"):
                 if randomized:
                     gateway = False
@@ -355,7 +395,9 @@ class Game:
             self.audit.append(
                 self._event(
                     "intervene", condition=condition,
-                    selection="uniform_five_way" if randomized else "controller_choice",
+                    selection=("uniform_five_way" if randomized else
+                               "sealed_schedule" if self.pilot_assignment else
+                               "controller_choice"),
                     links=dict(self.links), human_gateway=gateway,
                 )
             )
@@ -504,6 +546,16 @@ class Game:
                     "pilot_abort_reason": self.pilot_abort_reason,
                     "pilot_valid_for_primary": self._pilot_valid(),
                     "pilot_question_count": self._question_count(),
+                    "pilot_schedule_bound": self.pilot_assignment is not None,
+                    "pilot_trial_id": (
+                        self.pilot_assignment["trial_id"]
+                        if self.pilot_assignment is not None else None
+                    ),
+                    "pilot_assignment": (
+                        dict(self.pilot_assignment)
+                        if self.pilot_assignment is not None else None
+                    ),
+                    "pilot_seed_commitment": self.pilot_seed_commitment,
                     "revealed": self.revealed, "verdict": self.verdict,
                     "score": self._score(),
                     "pacing_seconds": self.pacing_seconds,

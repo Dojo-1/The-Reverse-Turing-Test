@@ -58,7 +58,7 @@ Set `RTT_ROLE_TOKEN` to **machine_A's** token in that process first. Use distinc
 
 **Strict pilot** — a precommitted 24-trial design; per trial: two genuine-machine baseline questions → concealed intervention → public continuation marker → six questions → locked probabilities. Fixed 45-second answer gates, explicit aborts, independent read-only timing witness, and an [offline evidence auditor](docs/PILOT_ANALYSIS.md).
 
-[**Strict pilot rules**](docs/STRICT_PILOT.md) · [**Study preregistration**](docs/PILOT_PREREGISTRATION.md) · [**Timing limits**](docs/PACING.md) · [**C's receipt log**](docs/CONDUCTOR_RECEIPT.md)
+[**Strict pilot rules**](docs/STRICT_PILOT.md) · [**Bind a sealed trial**](docs/SEALED_ASSIGNMENT.md) · [**Preregistration**](docs/PILOT_PREREGISTRATION.md) · [**Timing limits**](docs/PACING.md) · [**C's receipt log**](docs/CONDUCTOR_RECEIPT.md)
 
 ## 04 · Evidence before elegance
 
