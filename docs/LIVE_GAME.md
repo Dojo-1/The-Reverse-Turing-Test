@@ -44,9 +44,9 @@ See the fuller [human](HUMAN_PLAYER.md), [machine](MACHINE_PLAYERS.md), and [fac
 
 ## Blinding does not yet normalize physical timing
 
-The R3 conductor and respondent JSON projections whitelist fields and **omit stored event timestamps**. The controller retains timestamps for audit. The human/machine participants can still differ in **real-world response arrival time**: the relay publishes answers as soon as their sender submits them. A live conductor may infer delays by its own clock or polling history.
+R3 conductor and respondent JSON projections whitelist fields and **omit stored timestamps**. R4 adds **optional** fixed-release answer buffering when the controller activates it before the first question. Without that setting, the relay still publishes replies immediately and the session is timing-visible. Even with it, client polling, OS scheduling, external inference providers and connection delays remain measurable; use the controller's `late_publication` and `deadline_miss` records to disqualify invalid runs.
 
-Therefore, an ordinary local game is **timing-visible**. Do not label it timing-blinded or use it as the controlled pilot without a paced facilitator. For an operationally blinded pilot, the controller must buffer answers and publish them at a precommitted common release boundary for both human and machine conditions; the current automatic R3 respondent does not implement this gate. See [PILOT_PREREGISTRATION.md](PILOT_PREREGISTRATION.md).
+Therefore, an ordinary local game is **timing-visible**. Do not label it timing-blinded or use it as the controlled pilot without a paced facilitator. For a timing-controlled pilot, configure the [R4 fixed-release gate](PACING.md) and independently verify actual delivery timing. The gate is a prerequisite, not proof of end-to-end blinding. See [PILOT_PREREGISTRATION.md](PILOT_PREREGISTRATION.md).
 
 The five-state observational-equivalence theorem and its Python regression test apply only to serialized fields with matched visible transcripts and matched verdicts. They make no claim about network timing, answer content differences, or external model providers.
 

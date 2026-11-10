@@ -226,7 +226,7 @@ def latest_unanswered(public: list[dict]) -> dict | None:
     for event in public:
         if event["kind"] == "question":
             pending = event
-        elif event["kind"] == "answer":
+        elif event["kind"] in ("answer", "timeout"):
             pending = None
     return pending
 
@@ -237,7 +237,7 @@ def outstanding_any(public: list[dict]) -> bool:
         kind = event["kind"]
         if kind == "question":
             pending[event["channel"]] = True
-        elif kind == "answer":
+        elif kind in ("answer", "timeout"):
             pending[event["channel"]] = False
     return any(pending.values())
 
@@ -303,6 +303,8 @@ class Agent:
             return "waiting"
         if view.get("locked") or view.get("revealed"):
             return "done"
+        if view.get("awaiting_release"):
+            return "waiting"
         return self._respondent_step(view)
 
     def _respondent_step(self, view) -> str:
@@ -325,6 +327,8 @@ class Agent:
         if view.get("verdict") is not None or view.get("revealed"):
             return "done"
         events = view["public"]
+        if any(event["kind"] == "timeout" for event in events):
+            raise AdapterError("Paced trial missed a deadline; stop controlled interpretation")
         if outstanding_any(events):
             return "waiting"
         counts = {ch: sum(e["kind"] == "question" and e["channel"] == ch

@@ -51,3 +51,14 @@ Evidence anchor: verify actual R2 PR head and [Actions runs](https://github.com/
 - **Badge:** `main` still used an outdated branch badge; the R3 README corrects it to `branch=main`. In GitHub, the badge is decorative CI metadata, not evidence of the exact research theorem.
 - **Prior:** a uniformly drawn five-way intervention induces scored three-way prior `(3/5,1/5,1/5)`; neither universal prior nor a calibrated model output is implied.
 - **Empirical:** no real human impersonation or LLM benchmark trials have been completed. A separate preregistration documents a *proposed* matched pilot, not measured results.
+
+
+## R4 — Fixed-release timing control (optional, no human trials)
+
+- **Formal P:** [`ReverseTuring/Pacing.lean`](../ReverseTuring/Pacing.lean) proves a finite, discrete-time **conditional** observation result: identical answers received before a common deadline have identical abstract public transcripts, for all observation times. The theorem does not concern response *content*, external channels, OS scheduling or model-provider state.
+- **Artifact/tested A:** [`game/engine.py`](../game/engine.py) can buffer a respondent's reply; C cannot see it until the clock boundary. [`game/server.py`](../game/server.py) starts a best-effort background worker to service releases independently of API polling. A response absent at the deadline generates an explicit `timeout`, not a fabricated answer.
+- **Tested A:** [`tests/test_pacing.py`](../tests/test_pacing.py) covers early vs late-in-window submissions, identical projected transcripts, pending error invariance, no duplicate model submissions, timer worker without polling, HTTP role separation, missed answers, late publication audit, and compatibility with unpaced play. These tests use a controllable fake clock; they do not measure real-world scheduling jitter.
+- **Instrumented A:** The controller receives `deadline_miss` and `late_publication` violations, the nominal monotonic deadline and observed server publication delay. A publication more than one second late is flagged. C receives none of this metadata. This is **not** proof that C received the answer within ±1 second.
+- **Not measured M=absent:** No volunteer human/game sessions, no real external model trial, no latency-distribution measurements, no independent receipt-time capture and no pilot-effect estimate.
+- **Research stop condition:** A confirmatory claim fails if any measured unaccounted timing channel, missed deadline, unbalanced intervention, unexplained event, or unrecorded trial exclusion compromises a matched control. Preserve the failed run; do not silently reclassify it.
+- **Research next:** Complete an explicitly controlled two-baseline/six-continuation phase barrier and independently observe C's actual receipt time before running the 24-trial protocol.

@@ -100,7 +100,7 @@ For additional defense, the prompt builder whitelists `kind`, `speaker`, `channe
 
 ### Experimental timing warning
 
-Automatic respondents publish an answer immediately after a provider completion. Consequently, even though the R3 event serialization drops raw timestamps, **polling delays and turn arrival times remain visible to C**. The automatic adapter is presently suitable for exploratory gameplay and isolation tests, **not** a timing-controlled confirmatory pilot. For the proposed 24-trial design use paced manual relay or first implement and test a release gate. Record model compute time and provider configurations in the controller-only audit.
+In unpaced sessions, automatic respondents publish an answer immediately and C can infer response timing. R4 adds **server-controlled answer buffering**, with a common per-question release deadline configured by the controller before interrogation. An R3 model agent now waits after submitting a buffered reply instead of repeatedly answering. For controlled runs configure the fixed-release mode and use `--poll-seconds 0.25` for C. Provider, operating-system and network latency remain outside formal blinding guarantees; missed gates are invalid for the confirmatory pilot. See [PACING.md](PACING.md).
 
 See [the proof-to-engine boundary](PROOF_IMPLEMENTATION_BRIDGE.md) and [preregistration](PILOT_PREREGISTRATION.md).
 
