@@ -69,3 +69,11 @@ The current score is a Brier score for the collapsed three-way **human location*
     lake build
 
 Python unit and loopback HTTP tests exercise token authorization, role isolation, controller visibility, sham machine swaps, private-channel access, no-intervention verdicts, and scoring. The Lean files prove separate finite structural statements: runtime tests do not establish their semantic correspondence automatically. See [claims](CLAIMS.md).
+
+## R5: opt-in structured pilot and read-only witness
+
+The default open game remains free-form. To use the proposed precommitted 24-trial protocol, click **Enable strict pilot** on the controller screen *before* interrogation. The server then enforces a 45-second gate, genuine-machine baseline questions A and B, a hidden schedule-assigned intervention, a public resumption signal and six continuation questions. It also permits explicit abort/export of an incomplete run without inventing a verdict.
+
+For detailed play see [STRICT_PILOT.md](STRICT_PILOT.md); start the read-only independent-process timing sidecar using [OBSERVER.md](OBSERVER.md). The sidecar has its own credential and sees no hidden intervention metadata.
+
+**Caution:** the current app does not automatically verify that the controller selected the correct assigned trial row; an independent host must reconcile controller exports with the private committed schedule. The observer measures its own first HTTP receipt, not C's actual receipt.
