@@ -1,6 +1,6 @@
 # Evidence ledger — 2026-11-10
 
-**Evidence anchor:** Lean proof check succeeded for exact commit `bf9fb024eb82b83d584788c98e158990f5e9f428` in GitHub Actions [run 42875799282](https://github.com/Dojo-1/The-Reverse-Turing-Test/actions/runs/42875799282). Earlier failures (missing Lake manifest, then Lean proof syntax) are retained in Actions history. Any later changes must be checked at their own SHA; a previous green run is not automatically a test of later edits.
+**Merged baseline evidence anchor:** The R2 squash commit [`abf55231a10e3e72aacc88394162f8749f90a86d`](https://github.com/Dojo-1/The-Reverse-Turing-Test/commit/abf55231a10e3e72aacc88394162f8749f90a86d) on `main` passed both `lean` and `relay` jobs in [Actions run 42883746679](https://github.com/Dojo-1/The-Reverse-Turing-Test/actions/runs/42883746679). The original R1 proof-development commit `bf9fb024eb82b83d584788c98e158990f5e9f428` passed [run 42875799282](https://github.com/Dojo-1/The-Reverse-Turing-Test/actions/runs/42875799282) but is **not an ancestor of the squashed `main` commit**; it remains historical evidence, not the merged-history anchor. The R3 new proof and Python bridge tests have separate checks; always verify their *exact head SHA* before promoting them.
 
 | Claim | Kind | Status | Exact scope / caveat |
 | --- | --- | --- | --- |
@@ -40,3 +40,14 @@ Evidence anchor: verify actual R2 PR head and [Actions runs](https://github.com/
 - **TESTED as an implementation:** loopback relay and scripted-model end-to-end tests, including manual human substitution and a locked verdict. GitHub Actions [run 42884221972](https://github.com/Dojo-1/The-Reverse-Turing-Test/actions/runs/42884221972) passed both Lean and Python/JS jobs with 31 Python tests on commit `9c8d8f57afbd36bc7fb9cd8803d3d8a469b79626`. Revalidate later heads independently.
 - **NOT TESTED:** responses from a real local or remote LLM served over the adapter; measured impersonation success; actual human game sessions; accurate recognition of intelligence; cross-model KV-cache communication; model/provider independence; hostile operator security; statistical generalization.
 - **Limit:** The adapter guarantees only the fields *it sends* to the provider under these tested software paths. It cannot guarantee the external backend's state separation, retention policy, behavior, or lack of side channels. A mock provider is not independent validation of a real provider.
+
+
+## Reviewer audit — timestamp and formalization repair
+
+- **Confirmed and repaired in R3 branch:** the old `Game._project` emitted raw `timestamp` fields even though it reindexed global event IDs. This exposed stored answer times. Public and respondent-visible private events now use separate whitelist projections: public `{sequence,kind,channel,speaker,body}` and private `{sequence,kind,from_channel,to_channel,body}`. The controller retains raw timing data for audit. **Live arrival latency is still observable and is NOT normalized by this change.**
+- **New formal statement:** `ReverseTuring/Noninterference.lean` formalizes a pre-reveal projection theorem for a snapshot with the same public payloads and the same verdict. It proves that changing hidden identity, controller/private state, internal sequence, or timestamps cannot change the **modeled serialization**. It does not prove Python implements the Lean definition.
+- **Implementation bridge:** a black-box, five-condition metamorphic regression checks equality of actual Python conductor views under equal public messages and different hidden conditions, link configurations and private history. It also checks future metadata cannot leak through the projection. Source-authored tests are not independent external validation.
+- **Rejected reviewer claim:** `game/web/style.css` is not empty on merged `main` (4,444 characters in the GitHub connector's decoded source). No styling repair is warranted for that claim; browser rendering across devices remains unmeasured.
+- **Badge:** `main` still used an outdated branch badge; the R3 README corrects it to `branch=main`. In GitHub, the badge is decorative CI metadata, not evidence of the exact research theorem.
+- **Prior:** a uniformly drawn five-way intervention induces scored three-way prior `(3/5,1/5,1/5)`; neither universal prior nor a calibrated model output is implied.
+- **Empirical:** no real human impersonation or LLM benchmark trials have been completed. A separate preregistration documents a *proposed* matched pilot, not measured results.
