@@ -1,7 +1,8 @@
-name: Lean proof check
+name: Lean proofs and local game
 on:
   push:
   pull_request:
+
 jobs:
   lean:
     runs-on: ubuntu-latest
@@ -10,3 +11,15 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           build: true
+
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Rule engine and HTTP relay regression
+        run: python -m unittest discover -s tests -v
+      - name: Browser client syntax
+        run: node --check game/web/app.js
