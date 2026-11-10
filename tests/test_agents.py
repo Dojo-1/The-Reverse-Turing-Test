@@ -42,6 +42,8 @@ class AdapterValidationTests(unittest.TestCase):
             "file:///etc/passwd",
             "http://user:password@127.0.0.1/v1/chat/completions",
             "https://api.example.com/v1/chat/completions?api_key=secret",
+            "http://127.0.0.1:notaport/v1/chat/completions",
+            "http://127.0.0.1:0/v1/chat/completions",
         ):
             with self.subTest(url=url), self.assertRaises(AdapterError):
                 endpoint_url(url, relay=False)
