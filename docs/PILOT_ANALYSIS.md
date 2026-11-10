@@ -70,3 +70,10 @@ Success in this code check does not imply an absence of hidden-channel leakage, 
 ## R8 conductor-side transport check (separate from R6 statistical report)
 
 The R6 analyzer does **not** flip `confirmatory_ready` when additional first-seen timing logs are supplied. To audit a new direct C log, run [`python -m experiments.check_conductor_delivery`](CONDUCTOR_RECEIPT.md) with a controller export and the **conductor process's own** receipt file, not the separate observer log. The comparison uses a shared-monotonic-clock assumption that must be validated outside the program. Keep both the raw lag values and all explicit negative controls; a passed software timing comparison is not an empirical missing-link effect.
+
+
+## R9 allocation-binding requirement
+
+R6's earliest synthetic fixture could pass even when a pilot was manually configured. The analysis now **rejects unbound strict-pilot exports** with explicit error codes (for example `pilot_assignment_unbound`, `pilot_trial_id_mismatch`, `pilot_assignment_receipt_mismatch`, and `pilot_commitment_mismatch`). It checks the controller `configure_pilot` audit receipt as well as the `sealed_schedule` intervention marker. A manually configured eight-question rehearsal may still be played and scored but **cannot be counted among the 24 preregistered observations**.
+
+See [SEALED_ASSIGNMENT.md](SEALED_ASSIGNMENT.md) for the private, controller-token-only setup. This strengthens a software validation boundary, not independent proof of ethical recruitment or honest schedule publication.
