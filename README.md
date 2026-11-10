@@ -21,6 +21,16 @@
 
 ---
 
+### ◇ R5 / The experiment remembers its rules
+
+A Turing-style game can remain open-ended while a scientific trial fixes its rules **before** its outcome. The controller can now opt into the structured pilot: exactly **A, B** in the genuine-machine baseline, a private intervention, a public resume signal, then six continuation questions.
+
+A separate **read-only observer** records when public replies first become visible on its own connection. It cannot spy on the hidden state or prove what the conductor actually received.
+
+[**⌘ Play the eight-question pilot**](docs/STRICT_PILOT.md) · [**◷ Run the timing witness**](docs/OBSERVER.md) · [**◇ View the preregistration**](docs/PILOT_PREREGISTRATION.md)
+
+---
+
 ### ◷ R4 / Hold the answer. Not the experiment.
 
 A human may type slowly; a model may answer in milliseconds. When C can measure that latency, the game risks identifying **the clock rather than the participant**.
@@ -189,9 +199,9 @@ The project uses Lean 4 / Lake, pinned to `v4.35.0`, with only Lean's `Init` lib
 
 This is an open research playground, not an intelligence leaderboard. We are interested in what happens when a human uses Gödel, Curry, machine-like restraint, or plain conversational dexterity; when machines share hidden context; and when a conductor learns that its **certainty has outpaced its evidence**.
 
-**Already here:** a manual play protocol, an executable local browser relay, optional role-isolated model drivers, fixed-release pacing, a participant controller, Python and mock-provider regression tests, Lean finite structural proofs, and an evidence ledger.
+**Already here:** a manual play protocol, a browser relay, isolated model drivers, optional fixed-release pacing, an enforced eight-question pilot phase structure, a separate read-only timing witness, regression tests, Lean finite structural proofs, and an evidence ledger.
 
-**Not here yet:** an autonomous trial phase controller, independently measured end-to-end timing compliance, production-ready remote multiplayer hosting, verified model-to-model KV translation, human-participant results, or an equilibrium theorem for the open family of games.
+**Not here yet:** binding each trial automatically to the sealed 24-row schedule, independently verified conductor receipt timing, production-ready remote multiplayer hosting, KV-cache translation, human-participant results, or an equilibrium theorem for the open family of games.
 
 As experiments accumulate, their conditions, failed runs, and counterexamples belong beside their successes.
 
