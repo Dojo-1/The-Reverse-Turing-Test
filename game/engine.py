@@ -68,6 +68,19 @@ class Game:
             raise RuleError("Channel must be A or B")
         return channel
 
+
+    @staticmethod
+    def _project(events):
+        """Expose a dense, view-local counter, never the internal event index.
+
+        Global event indices would reveal the number and timing of hidden
+        controller interventions or private transfers to the conductor.
+        """
+        return [
+            {**event, "sequence": index}
+            for index, event in enumerate(events, start=1)
+        ]
+
     def _active_channel(self, role):
         for channel, active_role in self.active.items():
             if active_role == role:
@@ -251,7 +264,7 @@ class Game:
                 # No active-role, link, intervention type, substitution time or
                 # private transcript before the controller's explicit reveal.
                 return {
-                    "role": "conductor", "public": list(self.public),
+                    "role": "conductor", "public": self._project(self.public),
                     "verdict": self.verdict,
                     "revealed": self.revealed,
                     "outcome": ({"condition": self.condition,
@@ -268,8 +281,8 @@ class Game:
             ] if self._allows_link(role) else []
             return {
                 "role": "respondent", "active": True, "channel": channel,
-                "public": [event for event in self.public if event["channel"] == channel],
-                "private": private, "revealed": self.revealed,
+                "public": self._project([event for event in self.public if event["channel"] == channel]),
+                "private": self._project(private), "revealed": self.revealed,
                 "locked": self.verdict is not None,
                 "can_whisper": self._allows_link(role) and self.links[
                     "A_to_B" if channel == "A" else "B_to_A"
