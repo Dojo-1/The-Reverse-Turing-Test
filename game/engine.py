@@ -122,7 +122,8 @@ class Game:
         submitted = pending["answer"] is not None
         body = pending["answer"] if submitted else "[NO RESPONSE BY DEADLINE]"
         self.public.append(self._event(
-            "answer", channel=pending["channel"],
+            "answer" if submitted else "timeout",
+            channel=pending["channel"],
             speaker=pending["channel"], body=body,
         ))
         if not submitted:
