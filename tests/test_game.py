@@ -56,6 +56,38 @@ class EngineTests(unittest.TestCase):
         with self.assertRaises(RuleError):
             self.game.act("machine_B", "answer", {"body": "inactive"})
 
+    def test_public_sequences_cannot_reveal_hidden_controller_events(self):
+        baseline(self.game)
+        initial_public_count = len(self.game.view("conductor")["public"])
+        self.game.act("controller", "configure", {
+            "links": {"A_to_B": True, "B_to_A": False}
+        })
+        self.game.act("machine_A", "whisper", {"body": "hidden message"})
+        self.game.act("controller", "intervene", {
+            "condition": "unchanged",
+            "links": {"A_to_B": True, "B_to_A": False}
+        })
+        self.game.act("conductor", "ask", {
+            "channel": "B", "body": "Did anything change?"
+        })
+        self.assertGreater(self.game.public[-1]["sequence"], len(self.game.public))
+        public_view = self.game.view("conductor")["public"]
+        self.assertEqual(
+            [event["sequence"] for event in public_view],
+            list(range(1, len(public_view) + 1))
+        )
+        self.assertEqual(public_view[-1]["sequence"], initial_public_count + 1)
+        self.assertNotIn("hidden message", json.dumps(self.game.view("conductor")))
+        channel_view = self.game.view("machine_B")
+        self.assertEqual(
+            [event["sequence"] for event in channel_view["public"]],
+            list(range(1, len(channel_view["public"]) + 1))
+        )
+        self.assertEqual(
+            [event["sequence"] for event in channel_view["private"]],
+            list(range(1, len(channel_view["private"]) + 1))
+        )
+
     def test_endpoint_isolation_and_substitution_history(self):
         baseline(self.game)
         self.game.act("controller", "intervene", {"condition": "humanA"})
