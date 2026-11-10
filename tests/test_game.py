@@ -109,7 +109,7 @@ class EngineTests(unittest.TestCase):
             self.assertNotIn(marker, json.dumps(after))
         self.assertIn("timestamp", self.game.view("controller")["public"][0])
 
-    def test_metomorphic_equal_public_transcripts_hide_different_interventions(self):
+    def test_metamorphic_equal_public_transcripts_hide_different_interventions(self):
         """All five interventions induce identical pre-reveal API views
         when public payloads and verdicts are held equal. Includes hidden
         link variation and different numbers of controller/private events.
@@ -326,6 +326,16 @@ class HttpTests(unittest.TestCase):
         status, js = self.request("GET", "/app.js")
         self.assertEqual(status, 200)
         self.assertIn(b"no_human", js)
+
+    def test_stylesheet_is_served_and_not_empty(self):
+        status, css = self.request("GET", "/style.css")
+        self.assertEqual(status, 200)
+        self.assertGreater(len(css), 1000)
+        self.assertIn(b".workspace", css)
+        self.assertIn(b".panel", css)
+        status, html = self.request("GET", "/")
+        self.assertEqual(status, 200)
+        self.assertIn(b'href="/style.css"', html)
 
     def test_invalid_action_cannot_escalate_privilege(self):
         self.assertEqual(
