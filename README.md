@@ -74,4 +74,4 @@ node --check game/web/app.js
 
 The [evidence ledger](docs/CLAIMS.md) separates proofs, implementation checks, hypotheses and missing measurements. Passing tests is not an independent research result.
 
-<sub>Designed for humans and machines. Maintained with epistemic caution. No root license has yet been selected; do not assume reuse permissions.</sub>
+<sub>Designed for humans and machines. Maintained with epistemic caution. [License terms are pending](https://github.com/Dojo-1/The-Reverse-Turing-Test/issues/7); do not assume reuse permissions.</sub>
