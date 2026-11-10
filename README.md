@@ -11,7 +11,7 @@
 
 <br />
 
-[**🎮 Play the game**](docs/HOST_AND_PLAY.md) · [**♟ Explore the mathematics**](docs/MATHEMATICS.md) · [**◌ Read the proofs**](ReverseTuring) · [**◇ Evidence ledger**](docs/CLAIMS.md)
+[**🎮 Play the game**](docs/HOST_AND_PLAY.md) · [**♟ Explore the mathematics**](docs/MATHEMATICS.md) · [**◌ Inspect the Lean statements**](ReverseTuring) · [**◇ Evidence ledger**](docs/CLAIMS.md)
 
 <br />
 
@@ -38,7 +38,7 @@ python -m game.agents --role machine_A --provider compatible \
 
 The `scripted` provider offers deterministic plumbing checks without an LLM; it is not a valid intelligence measurement. The human stays human—and participates through the browser. The controller, holding the true state, is never automated.
 
-[**↗ Model adapters and role isolation**](docs/MODEL_ADAPTERS.md) · [**↗ Mock-provider tests**](tests/test_agents.py)
+[**↗ Model adapters and role isolation**](docs/MODEL_ADAPTERS.md) · [**↗ Mock-provider tests**](tests/test_agents.py) · [**↗ Proposed blinded pilot**](docs/PILOT_PREREGISTRATION.md)
 
 ---
 
@@ -150,7 +150,7 @@ V^* = \sum_{\tau}\max_{\theta}
 \bigl[\mu(\theta)P_{\theta}(\tau)\bigr].
 $$
 
-The Lean code currently establishes the corresponding **finite, integer-weighted three-way classification bound and explicit argmax attainment**, together with deterministic observation-collision and channel-symmetry results. The displayed probabilistic version and the richer stochastic strategic game are not yet encoded as full Lean probability kernels.
+The Lean code establishes the **finite, integer-weighted three-way classification bound and explicit argmax attainment**, along with deterministic observation-collision, channel symmetry, and a **conditional pre-reveal projection noninterference theorem**. The last theorem has a [field-by-field bridge to the Python conductor view](docs/PROOF_IMPLEMENTATION_BRIDGE.md) and a five-state metamorphic test; it is **not** a machine-checked proof that Python implements Lean. The displayed probabilistic formula and richer stochastic strategic game are not yet encoded as full Lean probability kernels.
 
 **Try a kernel check:**
 
@@ -165,6 +165,9 @@ The project uses Lean 4 / Lake, pinned to `v4.35.0`, with only Lean's `Init` lib
 | [`ReverseTuring/Core.lean`](ReverseTuring/Core.lean) | Adaptive deterministic conversations and transcript collisions |
 | [`ReverseTuring/Topology.lean`](ReverseTuring/Topology.lean) | Directed links, A/B relabeling, origin–connectivity confounding |
 | [`ReverseTuring/Bayes.lean`](ReverseTuring/Bayes.lean) | Finite classification bound and its maximizing decision rule |
+| [`ReverseTuring/Noninterference.lean`](ReverseTuring/Noninterference.lean) | Pre-reveal projection equality for identical public transcripts |
+| [Proof-to-engine contract](docs/PROOF_IMPLEMENTATION_BRIDGE.md) | Exact correspondence claimed; black-box tests and remaining gaps |
+| [Proposed 24-trial pilot](docs/PILOT_PREREGISTRATION.md) | Factorial link/origin controls, pacing gate, frozen analysis and allocation commitment |
 | [Mathematical analysis](docs/MATHEMATICS.md) | Game theory, strategy, information topology, hypotheses and counterexamples |
 | [R0 game specification](docs/GAME.md) | Initial definition, priors, controls, and research programme |
 | [Evidence ledger](docs/CLAIMS.md) | What was proved, derived, reported, or remains open |
