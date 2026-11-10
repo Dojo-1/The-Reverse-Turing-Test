@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+from threading import Event, Thread
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -110,12 +111,29 @@ def handler_factory(game: Game):
     return Handler
 
 
+def run_release_worker(game: Game, stop: Event, tick_seconds: float = 0.05):
+    """Service release boundaries independently of participant polling.
+
+    The worker is best-effort: OS scheduling and network delivery can still
+    introduce jitter. Actual lateness is recorded in the controller audit.
+    """
+    if not 0.005 <= tick_seconds <= 1:
+        raise ValueError("Release worker tick must be between 5 ms and 1 s")
+    while not stop.wait(tick_seconds):
+        with game.lock:
+            game._settle_due()
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Reverse Turing local game relay")
     parser.add_argument("--port", type=int, default=8765, help="local listening port")
     args = parser.parse_args(argv)
     game = Game()
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_factory(game))
+    stop = Event()
+    worker = Thread(target=run_release_worker, args=(game, stop),
+                    daemon=True, name="rtt-release-worker")
+    worker.start()
     host, port = server.server_address
     print("\nREVERSE TURING GAME — LOCAL RELAY", flush=True)
     print("The controller owns these links. SHARE ONLY the intended link with each player.\n", flush=True)
@@ -128,6 +146,8 @@ def main(argv=None):
     except KeyboardInterrupt:
         pass
     finally:
+        stop.set()
+        worker.join(timeout=1.0)
         server.server_close()
 
 
