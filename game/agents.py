@@ -326,6 +326,16 @@ class Agent:
     def _conductor_step(self, view) -> str:
         if view.get("verdict") is not None or view.get("revealed"):
             return "done"
+        phase = view.get("pilot_phase")
+        if phase is not None:
+            if self.question_budget != 8:
+                raise AdapterError("RTT-PILOT/1 requires exactly eight conductor questions")
+            if phase == "aborted":
+                raise AdapterError("Pilot aborted by controller; preserve partial record")
+            if phase == "transition":
+                # The controller's public resume event is independent of the
+                # hidden condition. No question is sent during this boundary.
+                return "waiting"
         events = view["public"]
         if any(event["kind"] == "timeout" for event in events):
             raise AdapterError("Paced trial missed a deadline; stop controlled interpretation")

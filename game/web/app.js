@@ -71,7 +71,16 @@ function buildController(v) {
     "<span class='pill mint'>INDEPENDENT CONTROLLER</span>",
     "<h2>Hold the secret.</h2><p>You control the intervention. Do not expose it to C.</p>",
     "<div id='phase' class='status'></div>",
-    "<div class='control-group'><h3>00 / Optional fixed-release mode</h3>",
+    "<div class='control-group'><h3>00 / Strict pilot (optional)</h3>",
+    "<p class='small'>RTT-PILOT/1 locks the 45-second gate and a fixed two-question baseline followed by six continuation questions. Use the secret, committed 24-trial schedule; do not use a fresh random draw.</p>",
+    "<button class='btn alt' type='button' id='enable-pilot'>Enable strict pilot</button>",
+    "<div id='pilot-control' class='status'></div>",
+    "<button class='btn hidden' type='button' id='resume-pilot'>Publish continuation marker</button>",
+    "<form id='abort-pilot' class='hidden'>",
+    "<label>Reason for invalid/incomplete run<textarea id='abort-reason' maxlength='2000' required></textarea></label>",
+    "<button class='btn warn' type='submit'>Abort and preserve record</button>",
+    "</form></div>",
+    "<div class='control-group'><h3>00b / Open-game pacing</h3>",
     "<p class='small'>For timing-controlled trials, set a common answer gate BEFORE C asks its first question. Stored timestamps are redacted, but actual browser/network jitter remains measurable.</p>",
     "<form id='pace-form'><label>Release interval (1–600 seconds)",
     "<input type='number' id='pace-seconds' min='1' max='600' step='1' value='45' required>",
@@ -107,6 +116,18 @@ function buildController(v) {
     document.getElementById(prefix + "-ab").checked = v.links.A_to_B;
     document.getElementById(prefix + "-ba").checked = v.links.B_to_A;
   }
+  document.getElementById("enable-pilot").onclick = async () => {
+    const ok = await act("configure_pilot", {});
+    if (ok) {
+      for (const id of ["base-ab", "base-ba", "swap-ab", "swap-ba"])
+        document.getElementById(id).checked = true;
+    }
+  };
+  document.getElementById("resume-pilot").onclick = () => act("resume_pilot", {});
+  document.getElementById("abort-pilot").onsubmit = e => {
+    e.preventDefault();
+    act("abort_pilot", { reason: document.getElementById("abort-reason").value });
+  };
   document.getElementById("pace-form").onsubmit = e => {
     e.preventDefault();
     act("configure_pacing", { seconds: Number(document.getElementById("pace-seconds").value) });
@@ -123,10 +144,17 @@ function buildController(v) {
   };
   document.getElementById("intervene").onsubmit = e => {
     e.preventDefault();
-    act("intervene", {
-      condition: document.getElementById("condition").value,
-      links: links("swap"), human_gateway: checked("gateway")
-    });
+    const condition = document.getElementById("condition").value;
+    const selected = links("swap");
+    const pilot = root.dataset.pilotEnabled === "true";
+    if (pilot && selected.A_to_B !== selected.B_to_A) {
+      toast("Strict pilot requires both private links ON or both OFF.");
+      return;
+    }
+    const gateway = pilot
+      ? (condition.startsWith("human") && selected.A_to_B)
+      : checked("gateway");
+    act("intervene", { condition, links: selected, human_gateway: gateway });
   };
   document.getElementById("random").onclick = () => act("random_intervene", {
     links: links("swap"), human_gateway: checked("gateway")
@@ -151,6 +179,7 @@ function buildConductor() {
     "<span class='pill'>MACHINE CONDUCTOR / C</span>",
     "<h2>Interrogate the unknown.</h2>",
     "<p>Machine A and B began the game. Look for a human, not just a disconnected link.</p>",
+    "<div class='status hidden' id='conductor-pilot-phase'></div>",
     "<form id='ask'><label>Ask channel<select id='target'>",
     "<option value='A'>A</option><option value='B'>B</option>",
     "</select></label><label>Your question<textarea id='question' maxlength='2000' required></textarea></label>",
@@ -227,14 +256,31 @@ function buildRespondent(v) {
 }
 function render(v) {
   if (v.role === "controller") {
-    document.getElementById("phase").textContent = v.revealed ? "REVEALED · trial closed" :
+    root.dataset.pilotEnabled = String(!!v.pilot_enabled);
+    document.getElementById("phase").textContent = v.pilot_enabled
+      ? ("RTT-PILOT/1 · " + v.pilot_phase.toUpperCase() + " · " +
+         v.pilot_question_count + "/8 questions")
+      : v.revealed ? "REVEALED · trial closed" :
       v.verdict ? "VERDICT LOCKED · ready to reveal" :
       v.intervened ? "SECRET INTERVENTION COMMITTED" :
       v.baseline_ready ? "BASELINE READY · make your move" :
       "BASELINE · obtain one answer each from A and B";
     const paced = v.pacing_seconds !== null;
+    const pilot = !!v.pilot_enabled;
+    document.getElementById("enable-pilot").classList.toggle("hidden",
+      pilot || paced || v.public.length > 0 || v.intervened || !!v.verdict);
+    document.getElementById("pilot-control").textContent = pilot
+      ? ("STRICT PILOT: " + v.pilot_phase +
+         " · fixed 45s gate · no random assignment" +
+         (v.pilot_aborted ? " · ABORTED: " + v.pilot_abort_reason : "") +
+         (v.timing_violations.length ? " · INVALID TIMING" : ""))
+      : "Open game: no fixed phase or mandatory question count.";
+    document.getElementById("resume-pilot").classList.toggle("hidden",
+      !pilot || !v.intervened || v.pilot_resumed || v.pilot_aborted);
+    document.getElementById("abort-pilot").classList.toggle("hidden",
+      !pilot || v.revealed || v.pilot_aborted);
     document.getElementById("pace-form").classList.toggle("hidden",
-      paced || v.public.length > 0 || v.intervened || !!v.verdict);
+      pilot || paced || v.public.length > 0 || v.intervened || !!v.verdict);
     document.getElementById("pace-status").textContent = paced
       ? ("FIXED RELEASE: " + v.pacing_seconds + "s" +
          (v.pending_gate ? (" · channel " + v.pending_gate.channel +
@@ -242,21 +288,46 @@ function render(v) {
           " · gate in " + Math.ceil(v.pending_gate.seconds_remaining) + "s") : "") +
          (v.timing_violations.length ? (" · " + v.timing_violations.length + " DEADLINE MISSES: trial invalid for timing-controlled analysis") : ""))
       : "UNPACED: response arrival timing remains visible to the conductor.";
-    document.getElementById("configure").classList.toggle("hidden", v.intervened || !!v.verdict);
-    document.getElementById("intervene").classList.toggle("hidden", v.intervened || !!v.verdict);
+    document.getElementById("configure").classList.toggle("hidden",
+      pilot || v.intervened || !!v.verdict);
+    document.getElementById("intervene").classList.toggle("hidden",
+      v.pilot_aborted || v.intervened || !!v.verdict ||
+      (pilot && v.pilot_phase !== "transition"));
+    document.getElementById("random").classList.toggle("hidden", pilot);
+    document.getElementById("gateway").disabled = pilot;
     document.getElementById("reveal").disabled = !v.verdict || v.revealed;
     const out = document.getElementById("outcome");
     out.replaceChildren();
     if (v.verdict) out.append(el("div", "metrics", "Locked: " + JSON.stringify(v.verdict.p)));
     if (v.score) out.append(el("div", "metrics",
       "Truth: " + v.condition + " · Brier: " + v.score.brier.toFixed(4)));
+    if (pilot && (v.verdict || v.pilot_aborted)) out.append(el(
+      "div", "metrics",
+      "Valid for primary analysis: " + (v.pilot_valid_for_primary ? "YES" : "NO")
+    ));
     entries("feed", v.public);
     entries("audit", v.private.concat(v.audit.map(a => Object.assign({}, a, {
       speaker: "CTRL", channel: "CTRL", body: JSON.stringify(a)
     }))).sort((a, b) => a.sequence - b.sequence));
   } else if (v.role === "conductor") {
-    document.getElementById("ask").classList.toggle("hidden", !!v.verdict);
-    document.getElementById("verdict-wrap").classList.toggle("hidden", !!v.verdict);
+    const pilot = v.pilot_phase !== null;
+    const phase = v.pilot_phase;
+    const phaseElement = document.getElementById("conductor-pilot-phase");
+    phaseElement.classList.toggle("hidden", !pilot);
+    phaseElement.textContent = pilot
+      ? ("STRUCTURED TRIAL · " + phase.toUpperCase() +
+         " · A public continuation marker does not disclose participant identity")
+      : "";
+    document.getElementById("ask").classList.toggle("hidden", !!v.verdict ||
+      (pilot && ["transition", "verdict", "locked", "aborted", "revealed"].includes(phase)));
+    document.getElementById("verdict-wrap").classList.toggle("hidden", !!v.verdict ||
+      (pilot && phase !== "verdict"));
+    const target = document.getElementById("target");
+    if (pilot && phase === "baseline") {
+      const count = v.public.filter(event => event.kind === "question").length;
+      target.value = count === 0 ? "A" : "B";
+      target.disabled = true;
+    } else target.disabled = false;
     const out = document.getElementById("outcome");
     out.replaceChildren();
     if (v.verdict) out.append(el("div", "metrics", "LOCKED · " + JSON.stringify(v.verdict.p)));
@@ -288,6 +359,10 @@ async function refresh() {
       snapshot = "";
       if (v.role === "controller") buildController(v);
       else if (v.role === "conductor") buildConductor(v);
+      else if (v.role === "observer")
+        root.innerHTML = "<section class='panel'><h2>Read-only timing observer</h2>" +
+          "<p>Use <code>python -m game.observer</code> with this role token in a separate local process. " +
+          "The browser cannot independently attest when the conductor receives an answer.</p></section>";
       else buildRespondent(v);
     }
     const next = JSON.stringify(v);
