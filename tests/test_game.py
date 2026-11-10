@@ -88,6 +88,74 @@ class EngineTests(unittest.TestCase):
             list(range(1, len(channel_view["private"]) + 1))
         )
 
+    def test_public_timestamp_and_future_metadata_are_not_projected(self):
+        baseline(self.game)
+        before = self.game.view("conductor")["public"]
+        for event in self.game.public:
+            event["timestamp"] = "2099-12-31T23:59:59+00:00"
+            event["sequence"] = 987654
+            event["future_controller_hint"] = "SECRET_DO_NOT_FORWARD"
+        after = self.game.view("conductor")["public"]
+        self.assertEqual(before, after)
+        self.assertEqual(
+            set(after[0]),
+            {"sequence", "kind", "channel", "speaker", "body"}
+        )
+        self.assertEqual(
+            [event["sequence"] for event in after],
+            list(range(1, len(after) + 1))
+        )
+        for marker in ("timestamp", "future_controller_hint", "2099", "987654"):
+            self.assertNotIn(marker, json.dumps(after))
+        self.assertIn("timestamp", self.game.view("controller")["public"][0])
+
+    def test_metamorphic_equal_public_transcripts_hide_different_interventions(self):
+        """All five interventions induce identical pre-reveal API views
+        when public payloads and verdicts are held equal. Includes hidden
+        link variation and different numbers of controller/private events.
+        This is a black-box implementation witness for the Lean spec.
+        """
+        projected = []
+        worlds = []
+        for i, condition in enumerate(Game.CONDITIONS):
+            game = Game()
+            baseline(game)
+            if i % 2 == 0:
+                game.act("controller", "configure", {
+                    "links": {"A_to_B": True, "B_to_A": False}
+                })
+                game.act("machine_A", "whisper", {
+                    "body": "private nonce for controller audit only"
+                })
+            game.act("controller", "intervene", {
+                "condition": condition,
+                "links": {"A_to_B": False, "B_to_A": i % 2 == 1},
+                "human_gateway": condition in ("humanA", "humanB"),
+            })
+            for side in ("A", "B"):
+                game.act("conductor", "ask", {
+                    "channel": side, "body": "What can you infer from this transcript?"
+                })
+                game.act(game.active[side], "answer", {
+                    "body": "I can provide observable answers, not origin proof."
+                })
+            game.act("conductor", "verdict", {
+                "p": {"no_human": .6, "human_A": .2, "human_B": .2},
+                "evidence": "Identical public evidence warrants no additional claim."
+            })
+            projected.append(game.view("conductor"))
+            worlds.append(game)
+        for view in projected[1:]:
+            self.assertEqual(view, projected[0])
+        self.assertTrue(all(not w.revealed for w in worlds))
+        self.assertEqual(len({w.condition for w in worlds}), 5)
+        for world in worlds:
+            world.act("controller", "reveal", {})
+        self.assertNotEqual(
+            worlds[0].view("conductor"),
+            worlds[1].view("conductor")
+        )
+
     def test_endpoint_isolation_and_substitution_history(self):
         baseline(self.game)
         self.game.act("controller", "intervene", {"condition": "humanA"})
@@ -258,6 +326,16 @@ class HttpTests(unittest.TestCase):
         status, js = self.request("GET", "/app.js")
         self.assertEqual(status, 200)
         self.assertIn(b"no_human", js)
+
+    def test_stylesheet_is_served_and_not_empty(self):
+        status, css = self.request("GET", "/style.css")
+        self.assertEqual(status, 200)
+        self.assertGreater(len(css), 1000)
+        self.assertIn(b".workspace", css)
+        self.assertIn(b".panel", css)
+        status, html = self.request("GET", "/")
+        self.assertEqual(status, 200)
+        self.assertIn(b'href="/style.css"', html)
 
     def test_invalid_action_cannot_escalate_privilege(self):
         self.assertEqual(

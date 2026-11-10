@@ -11,19 +11,40 @@
 
 <br />
 
-[**🎮 Play the game**](docs/HOST_AND_PLAY.md) · [**♟ Explore the mathematics**](docs/MATHEMATICS.md) · [**◌ Read the proofs**](ReverseTuring) · [**◇ Evidence ledger**](docs/CLAIMS.md)
+[**🎮 Play the game**](docs/HOST_AND_PLAY.md) · [**♟ Explore the mathematics**](docs/MATHEMATICS.md) · [**◌ Inspect the Lean statements**](ReverseTuring) · [**◇ Evidence ledger**](docs/CLAIMS.md)
 
 <br />
 
-![Lean proof check](https://github.com/Dojo-1/The-Reverse-Turing-Test/actions/workflows/lean.yml/badge.svg?branch=research%2Fr0-game-theory-lean)
+![Lean and relay checks](https://github.com/Dojo-1/The-Reverse-Turing-Test/actions/workflows/lean.yml/badge.svg?branch=main)
 
 </div>
 
 ---
 
+### ✦ R3 / Bring your own machine minds
+
+The conductor and genuine machine respondents can now be driven by **separate model clients** rather than a human manually copying every reply. Each actor uses only its assigned role token and the public/private messages that role is permitted to see.
+
+After starting the R2 local relay, run the following in separate terminals, each with its **own** `RTT_ROLE_TOKEN` from the controller:
+
+```sh
+# Example machine respondent connected to a local compatible endpoint
+python -m game.agents --role machine_A --provider compatible \
+  --model-url http://127.0.0.1:1234/v1/chat/completions \
+  --model YOUR_MODEL_ID
+
+# Repeat for machine_B and conductor with their own credentials
+```
+
+The `scripted` provider offers deterministic plumbing checks without an LLM; it is not a valid intelligence measurement. The human stays human—and participates through the browser. The controller, holding the true state, is never automated.
+
+[**↗ Model adapters and role isolation**](docs/MODEL_ADAPTERS.md) · [**↗ Mock-provider tests**](tests/test_agents.py) · [**↗ Proposed blinded pilot**](docs/PILOT_PREREGISTRATION.md)
+
+---
+
 ### ▶ Playable local alpha / R2
 
-The game has stepped off the page. A **local browser relay** now coordinates separate machine and human participants, a machine conductor, a blind hidden substitution, optional *text-based* private links, and a locked probabilistic verdict. It does not call LLM APIs for you and does not implement real KV transfers.
+The game has stepped off the page. A **local browser relay** coordinates separate machine and human participants, a machine conductor, blind substitution, optional *text-based* private links, and a locked probabilistic verdict. It does not implement real KV transfers. R3 adds optional model clients, without changing the controller's hidden-information boundary.
 
 &#x200B;
 
@@ -129,7 +150,7 @@ V^* = \sum_{\tau}\max_{\theta}
 \bigl[\mu(\theta)P_{\theta}(\tau)\bigr].
 $$
 
-The Lean code currently establishes the corresponding **finite, integer-weighted three-way classification bound and explicit argmax attainment**, together with deterministic observation-collision and channel-symmetry results. The displayed probabilistic version and the richer stochastic strategic game are not yet encoded as full Lean probability kernels.
+The Lean code establishes the **finite, integer-weighted three-way classification bound and explicit argmax attainment**, along with deterministic observation-collision, channel symmetry, and a **conditional pre-reveal projection noninterference theorem**. The last theorem has a [field-by-field bridge to the Python conductor view](docs/PROOF_IMPLEMENTATION_BRIDGE.md) and a five-state metamorphic test; it is **not** a machine-checked proof that Python implements Lean. The displayed probabilistic formula and richer stochastic strategic game are not yet encoded as full Lean probability kernels.
 
 **Try a kernel check:**
 
@@ -144,6 +165,9 @@ The project uses Lean 4 / Lake, pinned to `v4.35.0`, with only Lean's `Init` lib
 | [`ReverseTuring/Core.lean`](ReverseTuring/Core.lean) | Adaptive deterministic conversations and transcript collisions |
 | [`ReverseTuring/Topology.lean`](ReverseTuring/Topology.lean) | Directed links, A/B relabeling, origin–connectivity confounding |
 | [`ReverseTuring/Bayes.lean`](ReverseTuring/Bayes.lean) | Finite classification bound and its maximizing decision rule |
+| [`ReverseTuring/Noninterference.lean`](ReverseTuring/Noninterference.lean) | Pre-reveal projection equality for identical public transcripts |
+| [Proof-to-engine contract](docs/PROOF_IMPLEMENTATION_BRIDGE.md) | Exact correspondence claimed; black-box tests and remaining gaps |
+| [Proposed 24-trial pilot](docs/PILOT_PREREGISTRATION.md) | Factorial link/origin controls, pacing gate, frozen analysis and allocation commitment |
 | [Mathematical analysis](docs/MATHEMATICS.md) | Game theory, strategy, information topology, hypotheses and counterexamples |
 | [R0 game specification](docs/GAME.md) | Initial definition, priors, controls, and research programme |
 | [Evidence ledger](docs/CLAIMS.md) | What was proved, derived, reported, or remains open |
@@ -152,9 +176,9 @@ The project uses Lean 4 / Lake, pinned to `v4.35.0`, with only Lean's `Init` lib
 
 This is an open research playground, not an intelligence leaderboard. We are interested in what happens when a human uses Gödel, Curry, machine-like restraint, or plain conversational dexterity; when machines share hidden context; and when a conductor learns that its **certainty has outpaced its evidence**.
 
-**Already here:** a manual play protocol, an executable local browser relay, role-based message isolation, a participant controller, Python regression tests, Lean finite structural proofs, and an evidence ledger.
+**Already here:** a manual play protocol, an executable local browser relay, optional role-isolated model drivers, a participant controller, Python and mock-provider regression tests, Lean finite structural proofs, and an evidence ledger.
 
-**Not here yet:** automatic LLM model orchestration, remote-safe multiplayer hosting, a verified model-to-model KV translator, human trial results, or a theorem establishing an equilibrium for the open family of games.
+**Not here yet:** an autonomous experiment controller, production-ready remote multiplayer hosting, verified model-to-model KV translation, human-participant trial results, or an equilibrium theorem for the open family of games.
 
 As experiments accumulate, their conditions, failed runs, and counterexamples belong beside their successes.
 

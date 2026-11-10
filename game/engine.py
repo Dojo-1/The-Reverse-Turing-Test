@@ -70,14 +70,32 @@ class Game:
 
 
     @staticmethod
-    def _project(events):
-        """Expose a dense, view-local counter, never the internal event index.
+    def _project(events, *, private=False):
+        """Whitelist projected fields and reindex in the authorized view.
 
-        Global event indices would reveal the number and timing of hidden
-        controller interventions or private transfers to the conductor.
+        Public events and private handoffs use different schemas. Neither
+        projection exposes global sequence, raw timestamps, or extra metadata.
+        Hiding stored timestamps does NOT normalize network/typing latency.
         """
+        if private:
+            return [
+                {
+                    "sequence": index,
+                    "kind": "whisper",
+                    "from_channel": event["from_channel"],
+                    "to_channel": event["to_channel"],
+                    "body": event["body"],
+                }
+                for index, event in enumerate(events, start=1)
+            ]
         return [
-            {**event, "sequence": index}
+            {
+                "sequence": index,
+                "kind": event["kind"],
+                "channel": event["channel"],
+                "speaker": event["speaker"],
+                "body": event["body"],
+            }
             for index, event in enumerate(events, start=1)
         ]
 
@@ -282,7 +300,7 @@ class Game:
             return {
                 "role": "respondent", "active": True, "channel": channel,
                 "public": self._project([event for event in self.public if event["channel"] == channel]),
-                "private": self._project(private), "revealed": self.revealed,
+                "private": self._project(private, private=True), "revealed": self.revealed,
                 "locked": self.verdict is not None,
                 "can_whisper": self._allows_link(role) and self.links[
                     "A_to_B" if channel == "A" else "B_to_A"
