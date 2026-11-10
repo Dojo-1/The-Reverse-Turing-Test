@@ -91,7 +91,15 @@ H3 (strategic): over repeated rounds, a human can imitate machine responses well
 
 H4 (interpretive): better epistemic calibration is not interchangeable with better origin classification. Test both independently; do not infer intelligence from either.
 
-## 9. Formalization roadmap
+## 9. Serialized noninterference: stronger than labels, narrower than full blinding
+
+The new Lean module [Noninterference.lean](../ReverseTuring/Noninterference.lean) defines an abstract snapshot with public event payload, internal event metadata, hidden physical origin, controller/private state, verdict, and reveal flag. Its kernel-checked conditional theorem states that **unrevealed snapshots with equal ordered public payloads and equal verdicts have identical conductor projections**, irrespective of hidden state and private metadata. Stored timestamps and internal sequence indices are intentionally omitted.
+
+The corresponding Python implementation **must** separately project public and private message schemas; private handoffs have from/to fields rather than public channel/speaker fields. A five-condition metamorphic test checks the Python conductor output on matched transcripts under different interventions and link states. See [PROOF_IMPLEMENTATION_BRIDGE.md](PROOF_IMPLEMENTATION_BRIDGE.md).
+
+This is **not** verified Python/Lean translation, stochastic observational equivalence under varying strategies, or physical timing confidentiality. In a live relay, a conductor can still observe *when* a message arrives, even if no timestamp is serialized. The planned matched pilot makes delivery pacing an explicit prerequisite.
+
+## 10. Formalization roadmap
 
 - **R0**: deterministic histories, channel labels, observation collisions (existing core).
 - **R1**: information graph and link/origin confounding; finite integer weighted classifier bound (added).
