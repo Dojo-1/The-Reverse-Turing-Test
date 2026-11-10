@@ -131,3 +131,19 @@ The unit and loopback tests use a fake Chat Completions server. No real model-pr
 When the independent controller enables `RTT-PILOT/1`, the machine conductor must be launched with `--question-budget 8`. It asks A and B once each, waits while the controller privately commits the assigned intervention, and resumes **only after the controller publishes the explicit, condition-independent continuation marker**. This marker is the same across all hidden participant conditions.
 
 R5 enforces a fixed 45-second answer gate, forbids a ninth question and keeps the controller manual. The human remains a manual browser participant. See [STRICT_PILOT.md](STRICT_PILOT.md). A separate [observer sidecar](OBSERVER.md) can record first-seen event intervals but does **not** prove the conductor's actual delivery time. Do not report human-vs-machine results until independently controlled participant trials have been conducted.
+
+## R7 — Active private text, not pretend KV sharing
+
+The old adapter **read** permitted private messages but never **sent** them. To exercise the link in machine-operated trials, launch **all machine respondent processes** (including link-OFF controls) with `--private-handoff`:
+
+```sh
+python -m game.agents --role machine_A --provider compatible \
+  --model-url http://127.0.0.1:1234/v1/chat/completions \
+  --model YOUR_MODEL_ID --private-handoff
+```
+
+This is an **opt-in text-only research probe**. In every answering turn, the model returns strict JSON with two fields: `answer` (public) and `private_handoff` (private). The adapter makes **one model call in either link condition**, submits the private note only when `can_whisper` is authorized, then submits the public answer. Link-OFF notes are discarded. Real providers may use different token counts, caching or inference resources; a common request count is **not** a proof of compute parity.
+
+**Reading is now symmetrical:** link OFF hides *all* historical private messages from both replacement machines and human impostors; ON exposes the channel's previously permitted text history to both, provided the human has a gateway. Directional open-game links filter each message by its **current** direction. Private content already absorbed into a persistent external model or human memory cannot be revoked by this software projection. The controller's private audit retains all messages and the conductor sees none of them.
+
+A human with an authorized gateway can manually receive and send private text in the browser; the CLI never automates the human. If no actor actually sends messages, link ON is merely an **available affordance**, not a communication treatment. Record actual traffic and failure to use the channel before discussing missing-link effects. No real KV sharing is implemented.
