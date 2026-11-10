@@ -1,0 +1,59 @@
+# R2 — Play the Reverse Turing Game in a browser
+
+**Status:** local experimental relay. It is not an autonomous LLM orchestrator, a real KV-cache translator, a secure internet service, or a scientific evaluation by itself.
+
+## Start
+
+Requires Python 3.10+ (recommended Python 3.12), no additional packages. From the repository root:
+
+    python -m game.server --port 8765
+
+The terminal prints a **different link for every role**. Each link carries a random bearer credential in the URL fragment, not an ordinary query parameter. Keep the terminal output private; send each player **only their own link**. Use separate browser windows/sessions or separate computers with a *secure* local tunnel, as appropriate. The server deliberately binds to 127.0.0.1 only: no TLS, remote deployment or production identity infrastructure is supplied.
+
+You need:
+- a separate model/session acting as the **conductor** (C);
+- a model/session acting as **machine A**;
+- another model/session acting as **machine B**;
+- one human volunteer acting as **human impersonator**;
+- an **independent controller**, ideally not the person running C;
+- optional replacement machine sessions.
+
+The browser interface is an authenticated **manual relay**: copy a machine model's actual replies into its participant window and copy conductor questions back to its isolated model context. It does not automatically call an LLM API. Do **not** put controller metadata or another respondent's private messages into a machine's context.
+
+## One trial
+
+1. Open **controller**, **conductor**, **machine_A**, **machine_B** links in separate browser windows.
+2. If using a directed private text link, the controller enables it using **Set baseline links**. A shared text handoff is a simulated side channel, *not a KV-cache transfer*.
+3. C asks at least one question of A and B. Both genuine machines answer. The engine forbids intervention before receiving an answer from both.
+4. The controller privately chooses the intervention: **humanA**, **humanB**, **machineA**, **machineB**, or **unchanged**. It can independently change A→B and B→A private links. For a human substitution, it can authorize the human's access to a relay via **human gateway**.
+5. The controller hands the appropriate *new participant credential* to the replacement machine or human. The old respondent's credential becomes inactive. The new participant sees that channel's public history but not the other channel's public messages. A human without an authorized gateway sees no private messages.
+6. C keeps interrogating, then commits a three-way vector **P(no human), P(human A), P(human B)** summing to 1, plus optional evidence. Crucially, **C can submit before any intervention**, in which case the controller must accept a no-change trial. This avoids revealing intervention timing through an API error.
+7. Once the verdict is locked, the controller presses **Reveal outcome**. Both views can then see the outcome; the controller sees the correct class and Brier score.
+8. The controller presses **Export audit JSON** to save all public text, private messages, intervention history, and verdict. The JSON contains no participant bearer tokens. The engine otherwise keeps the state **in memory only**: exit without export and the trial is lost.
+
+### Player-facing quick instructions
+
+- **C**: ask adversarial questions, including Gödel/Curry-style logic and long-horizon consistency checks if you wish. Distinguish human origin from missing connection or machine replacement. Give calibrated probabilities; do not claim a proof of absent intelligence merely because something is a machine.
+- **Machine A/B**: reply to C via your own channel; defend machine origin as far as evidence allows, without inventing credentials or proofs; optionally use explicitly authorized private text links. Do not send controller secrets.
+- **Human**: act as the machine you replace. You may use mathematical, linguistic or epistemically cautious strategies. Access private text only if the controller explicitly supplies a gateway.
+- **Controller**: keep participants isolated, record chosen topology and intervention, lock the verdict before revealing, and export the record.
+
+See the fuller [human](HUMAN_PLAYER.md), [machine](MACHINE_PLAYERS.md), and [facilitator](HOST_AND_PLAY.md) guides.
+
+## Threat model and limitations
+
+This is for **local, consented research**. Do not run it publicly on the internet, handle sensitive information, or collect identifiable data without consent. Tokens grant role access; anyone who knows a token can impersonate that role. A controller at the same keyboard sees all URLs. The service does not implement identity verification, cryptographically committed randomization, independent attestation, privacy-preserving audit export, TLS, database persistence, multi-instance coordination, or real KV transfer.
+
+The browser is for human operators *relaying* external model responses. Participant independence is a requirement of the experimental protocol, not something the software can guarantee. In particular, sharing one upstream model context between A and B would invalidate the independent-session condition.
+
+The private channel is **ordinary controller-relayed text**, not hidden representation exchange. Do not interpret successful side-channel communication as evidence for SwaT's transfer mechanism.
+
+The current score is a Brier score for the collapsed three-way **human location** classes, with machine swaps and unchanged trials grouped into **no human**. It does not measure whether a change occurred, whether a particular inference was justified, or any broad definition of intelligence. Future versions should support precommitted priors, proper participant scheduling, richer intervention hypotheses and longitudinal statistics.
+
+## Verify
+
+    python -m unittest discover -s tests -v
+    node --check game/web/app.js
+    lake build
+
+Python unit and loopback HTTP tests exercise token authorization, role isolation, controller visibility, sham machine swaps, private-channel access, no-intervention verdicts, and scoring. The Lean files prove separate finite structural statements: runtime tests do not establish their semantic correspondence automatically. See [claims](CLAIMS.md).
