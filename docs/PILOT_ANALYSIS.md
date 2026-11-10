@@ -65,3 +65,8 @@ The known-answer tests explicitly construct **synthetic** data with an expected 
 The strongest deliverable is the **ability to detect some concrete departures from the preregistered assignment and scoring rules**. The strongest remaining obstruction is actual independently observed conductor reception timing, followed by real model and volunteer trials.
 
 Success in this code check does not imply an absence of hidden-channel leakage, human superiority, machine non-intelligence, or a statistically reliable causal effect.
+
+
+## R8 conductor-side transport check (separate from R6 statistical report)
+
+The R6 analyzer does **not** flip `confirmatory_ready` when additional first-seen timing logs are supplied. To audit a new direct C log, run [`python -m experiments.check_conductor_delivery`](CONDUCTOR_RECEIPT.md) with a controller export and the **conductor process's own** receipt file, not the separate observer log. The comparison uses a shared-monotonic-clock assumption that must be validated outside the program. Keep both the raw lag values and all explicit negative controls; a passed software timing comparison is not an empirical missing-link effect.
