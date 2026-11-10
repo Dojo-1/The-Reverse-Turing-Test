@@ -71,13 +71,20 @@ class Game:
 
     @staticmethod
     def _project(events):
-        """Expose a dense, view-local counter, never the internal event index.
+        """Project allowed transcript fields only, with dense local indices.
 
-        Global event indices would reveal the number and timing of hidden
-        controller interventions or private transfers to the conductor.
+        Never return internal sequence numbers, timestamps, controller fields,
+        or future metadata added to the internal event schema. This removes
+        stored timestamp disclosure, NOT real-time delivery-latency leakage.
         """
         return [
-            {**event, "sequence": index}
+            {
+                "sequence": index,
+                "kind": event["kind"],
+                "channel": event["channel"],
+                "speaker": event["speaker"],
+                "body": event["body"],
+            }
             for index, event in enumerate(events, start=1)
         ]
 
