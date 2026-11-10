@@ -56,3 +56,10 @@ The Lean code proves abstract finite projection and release-gate properties, not
 - Statistical estimates of the missing-link false-positive effect.
 
 R5 is a better **experimental instrument**, not a new empirical result.
+
+
+## R9: actually scheduled trials must be bound before the baseline
+
+**Important correction to the older manual instructions above:** `Enable strict pilot` on the browser creates an **unbound rehearsal**, not an admissible scheduled observation. For the 24 assigned trials, use [SEALED_ASSIGNMENT.md](SEALED_ASSIGNMENT.md) to validate the private seed against the public commitment and bind one `RTT-XX` row with the **controller's token before the first question**.
+
+In bound mode the server enforces the assigned hidden condition, post-intervention ON/OFF links and gateway, rejecting mismatches without altering the state. The controller-only UI shows the derived assignment. The seed is never exported. The R6 analyzer now rejects unbound/manual sessions when computing evidence from the preregistered dataset. This fixes a software assignment-discipline gap, **not** the external need to witness actual preregistration, control the operator, isolate model state or measure C-side timing.
