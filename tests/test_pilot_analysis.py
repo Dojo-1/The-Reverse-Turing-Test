@@ -16,7 +16,7 @@ from experiments.analyze_pilot import (
     PHASE_MARKER, EvidenceError, analyze, audit_trial,
     check_private_schedule, main, validate_witness,
 )
-from experiments.pilot_schedule import generate, public_commitment
+from experiments.pilot_schedule import generate, public_commitment, commitment
 from game.engine import Game
 
 
@@ -37,12 +37,14 @@ def reference_export(row, p_human=.3):
     on = row["link_after"] == "on"
     links = {"A_to_B": on, "B_to_A": on}
     event(audit, "configure_pilot", protocol="RTT-PILOT/1",
-          gate_seconds=45., links={"A_to_B": True, "B_to_A": True})
+          gate_seconds=45., links={"A_to_B": True, "B_to_A": True},
+          assignment_bound=True, trial_id=row["trial_id"],
+          schedule_commitment=commitment(SEED))
     for channel in ("A", "B"):
         event(public, "question", channel=channel, speaker="C", body="Question")
         event(public, "answer", channel=channel, speaker=channel, body="Answer")
     event(audit, "intervene", condition=row["condition"], links=links,
-          human_gateway=row["human_gateway"])
+          human_gateway=row["human_gateway"], selection="sealed_schedule")
     event(public, "phase", channel="C", speaker="CTRL", body=PHASE_MARKER)
     event(audit, "resume_pilot")
     for i in range(6):
@@ -63,6 +65,10 @@ def reference_export(row, p_human=.3):
         "schema": "reverse-turing-trial/v1",
         "pilot_enabled": True, "pilot_aborted": False,
         "pilot_valid_for_primary": True, "pilot_resumed": True,
+        "pilot_schedule_bound": True,
+        "pilot_trial_id": row["trial_id"],
+        "pilot_assignment": dict(row),
+        "pilot_seed_commitment": commitment(SEED),
         "revealed": True, "pilot_question_count": 8,
         "pacing_seconds": 45.0,
         "condition": row["condition"], "links": links,
@@ -132,6 +138,29 @@ class AnalysisTests(unittest.TestCase):
         with self.assertRaises(EvidenceError):
             check_private_schedule(plan, forged_public)
 
+    def test_manual_unbound_trial_and_wrong_binding_are_rejected(self):
+        plan, records = full_synthetic_data()
+        row = plan["trials"][0]
+        record = records[row["trial_id"]]
+        unbound = copy.deepcopy(record)
+        unbound["pilot_schedule_bound"] = False
+        unbound["pilot_trial_id"] = None
+        unbound["pilot_assignment"] = None
+        unbound["pilot_seed_commitment"] = None
+        self.assertIn(
+            "pilot_assignment_unbound",
+            audit_trial(row, unbound, expected_commitment=plan["commitment"])["errors"]
+        )
+        wrong = copy.deepcopy(record)
+        wrong["pilot_seed_commitment"] = "f" * 64
+        self.assertIn(
+            "pilot_commitment_mismatch",
+            audit_trial(row, wrong, expected_commitment=plan["commitment"])["errors"]
+        )
+        result = analyze(plan, {row["trial_id"]: unbound})
+        self.assertEqual(result["n_valid"], 0)
+        self.assertEqual(result["n_invalid_or_missing"], 24)
+
     def test_missing_and_misassigned_rows_are_never_imputed(self):
         plan, records = full_synthetic_data()
         del records[plan["trials"][0]["trial_id"]]
@@ -186,7 +215,10 @@ class AnalysisTests(unittest.TestCase):
 
         clock = Clock()
         game = Game(clock=clock)
-        game.act("controller", "configure_pilot", {})
+        game.act("controller", "configure_pilot_assigned", {
+            "seed": SEED, "trial_id": row["trial_id"],
+            "commitment": plan["commitment"],
+        })
         for side in ("A", "B"):
             game.act("conductor", "ask", {"channel": side, "body": "Question"})
             game.act("machine_" + side, "answer", {"body": "Answer"})
