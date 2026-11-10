@@ -505,33 +505,56 @@ class Game:
             if private_note is not None:
                 direction = "A_to_B" if channel == "A" else "B_to_A"
                 transmit = self._allows_link(role) and self.links[direction]
-                if transmit:
-                    self.private.append(self._event(
+            # Clock/sample and event construction are completed BEFORE any
+            # visible state is changed. If an event builder fails, restore
+            # sequence numbering and publish neither half of the reply.
+            accepted_at = self._clock() if pending is not None else None
+            old_sequence = self.sequence
+            try:
+                private_event = (
+                    self._event(
                         "whisper", from_channel=channel,
                         to_channel="B" if channel == "A" else "A",
                         body=private_note,
-                    ))
+                    ) if transmit else None
+                )
+                answer_event = (
+                    self._event(
+                        "answer", channel=channel, speaker=channel, body=body,
+                    ) if pending is None else None
+                )
+                submission_event = (
+                    self._event(
+                        "paced_submission", channel=channel,
+                        question_sequence=pending["question_sequence"],
+                        accepted_at_monotonic=accepted_at,
+                    ) if pending is not None else None
+                )
+                transaction_event = (
+                    self._event(
+                        "atomic_response", channel=channel,
+                        private_transmitted=transmit,
+                        private_discarded=not transmit,
+                        question_sequence=(
+                            pending["question_sequence"]
+                            if pending is not None else None
+                        ),
+                    ) if private_note is not None else None
+                )
+            except Exception:
+                self.sequence = old_sequence
+                raise
+            # Commit: all fields have been checked and all events prepared.
+            if private_event is not None:
+                self.private.append(private_event)
             if pending is not None:
                 pending["answer"] = body
-                pending["submitted_at"] = self._clock()
-                self.audit.append(self._event(
-                    "paced_submission", channel=channel,
-                    question_sequence=pending["question_sequence"],
-                    accepted_at_monotonic=pending["submitted_at"],
-                ))
+                pending["submitted_at"] = accepted_at
+                self.audit.append(submission_event)
             else:
-                self.public.append(self._event(
-                    "answer", channel=channel, speaker=channel, body=body,
-                ))
-            if private_note is not None:
-                self.audit.append(self._event(
-                    "atomic_response", channel=channel,
-                    private_transmitted=transmit,
-                    private_discarded=not transmit,
-                    question_sequence=(
-                        pending["question_sequence"] if pending is not None else None
-                    ),
-                ))
+                self.public.append(answer_event)
+            if transaction_event is not None:
+                self.audit.append(transaction_event)
             return
         if action == "whisper":
             if not self._allows_link(role):
