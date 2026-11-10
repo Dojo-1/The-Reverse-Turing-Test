@@ -154,3 +154,14 @@ A human with an authorized gateway can manually receive and send private text in
 For an optional timing-controlled machine-conductor session, add `--trial-id RTT-01 --receipt-log private/C-RTT-01.jsonl --poll-seconds 0.1` to C's command. This wraps the same HTTP read used by the model-driving `Agent.step()` call. A separately running observer cannot provide this evidence. Start C **before the first question**; the logger refuses to invent a first-seen time for pre-existing events.
 
 This does not expose receipt metadata to model prompts, attest the same OS clock across tunneled hosts, or establish when the provider internally processes the response. See the [conductor-receipt runbook](CONDUCTOR_RECEIPT.md) and use [offline timing check](../experiments/check_conductor_delivery.py) against the controller-only export.
+
+
+## R10 — One completion, one atomic model-to-relay action
+
+Prior to R10, `--private-handoff` sent a private `whisper` request *before* a separate public `answer` request. If the second request failed or crossed the release boundary, the private note could already have reached its recipient, breaking the experiment's intended one-answer/one-handoff correspondence.
+
+Now the adapter generates the same two-field JSON output (`answer`, `private_handoff`) in one model call under either link condition, then submits **one** relay `respond` action. The server validates **both strings**, the participant's active role, the outstanding paced answer and the final acceptance time **before** changing public or private state. When the directed link is ON, the note and accepted public answer are committed together under one lock. When OFF, the note is discarded and the answer is accepted alone. The controller-only audit records `atomic_response.private_transmitted` or `private_discarded`, with no private note in that audit event.
+
+This fixes a concrete partial-transfer failure and equalizes the **number of relay calls** made by machine agents in ON/OFF cells. It does **not** ensure the model uses equal tokens, context, wall-clock resources, or private-history knowledge; the model prompt's private data may legitimately differ across link conditions. Legacy manual `whisper` and `answer` remain separate for the original open game, so the atomic guarantee is restricted to machine agents using `--private-handoff`.
+
+The strict paced relay rejects notes whose paired answer misses its deadline, including when the clock passes the gate between the initial due check and final receipt timestamp. A rejected action must not produce a private transfer; timeouts remain invalid protocol events. These are software-test claims, not empirical study outcomes.
