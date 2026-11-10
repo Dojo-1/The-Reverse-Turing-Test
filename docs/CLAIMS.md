@@ -20,3 +20,14 @@
 **What a green Lean job does and does not certify.** It checks elaboration and proof terms of the submitted propositions in the configured Lean environment. It does not check that the game implementation matches human behavior, that a side channel functions, that a statistical experiment has been conducted, that a theory of intelligence is correct, or that the research is novel.
 
 **Next independent discriminator:** Run paired blinded trials with absent-link genuine machines, human substitutions, and unchanged machine controls. Keep the probabilities and the epistemic explanations as separate observations.
+
+
+## R2 — Local relay (separate from Lean and from empirical research)
+
+- **Implemented:** a loopback Python HTTP server, role-scoped random bearer tokens, machine conductor and isolated respondent views, one hidden intervention, machine-only controls, directed private *text* messages, locked three-class verdict, Brier score at reveal, and controller JSON export. See [LIVE_GAME.md](LIVE_GAME.md).
+- **Tested by GitHub Actions:** Python `unittest` tests cover rule transitions, HTTP authentication, role privacy, human-with-gateway controls, early-verdict non-oracle behavior, machine substitutions, probability validation, randomized intervention, and one full HTTP trial. Node syntax checks the browser script. These are **implementation tests**, not human-participant outcomes.
+- **Explicit limits:** The software does not verify the biological identity of a purported human, automatically converse with an LLM, securely operate across the internet, preserve data after process exit without manual export, or transfer model KV states.
+- **Intervention randomization:** optional `secrets.choice` uniform draw from five states is controller-visible and conductor-hidden. It has no reproducible seed or external randomization attestation. This is a convenience for pilots, not a scientifically conclusive allocation mechanism.
+- **Experimental status:** zero human-versus-machine trials conducted by this development branch. Conductor intelligence, model-to-model shared states, and statistical human detection remain **NOT TESTED**.
+
+Evidence anchor: verify actual R2 PR head and [Actions runs](https://github.com/Dojo-1/The-Reverse-Turing-Test/actions) at review; do not conflate a passing Lean build with runtime security or an independent empirical replication.

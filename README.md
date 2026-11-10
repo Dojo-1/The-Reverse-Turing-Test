@@ -21,6 +21,22 @@
 
 ---
 
+### ▶ Playable local alpha / R2
+
+The game has stepped off the page. A **local browser relay** now coordinates separate machine and human participants, a machine conductor, a blind hidden substitution, optional *text-based* private links, and a locked probabilistic verdict. It does not call LLM APIs for you and does not implement real KV transfers.
+
+&#x200B;
+
+```sh
+python -m game.server --port 8765
+```
+
+The terminal gives the independent controller **separate secret links** for C, A, B, the human impersonator, and replacement machines. Keep each link private, then open the role-specific windows to play. **Python 3.10+**, no third-party packages.
+
+[**↗ Full local game manual & security limits**](docs/LIVE_GAME.md) · [**↗ Rule-engine tests**](tests/test_game.py)
+
+---
+
 ### 01 / What if Turing's game looked back at us?
 
 Turing asked whether a machine could persuade a human that it was human.
@@ -136,9 +152,9 @@ The project uses Lean 4 / Lake, pinned to `v4.35.0`, with only Lean's `Init` lib
 
 This is an open research playground, not an intelligence leaderboard. We are interested in what happens when a human uses Gödel, Curry, machine-like restraint, or plain conversational dexterity; when machines share hidden context; and when a conductor learns that its **certainty has outpaced its evidence**.
 
-**Already here:** a manual play protocol, participant instructions, Lean formalizations of finite structural results, and an evidence ledger.
+**Already here:** a manual play protocol, an executable local browser relay, role-based message isolation, a participant controller, Python regression tests, Lean finite structural proofs, and an evidence ledger.
 
-**Not here yet:** a runnable multi-agent client, a verified model-to-model KV translator, human trial results, or a theorem establishing an equilibrium for the open family of games.
+**Not here yet:** automatic LLM model orchestration, remote-safe multiplayer hosting, a verified model-to-model KV translator, human trial results, or a theorem establishing an equilibrium for the open family of games.
 
 As experiments accumulate, their conditions, failed runs, and counterexamples belong beside their successes.
 

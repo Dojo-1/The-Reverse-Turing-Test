@@ -47,6 +47,14 @@ For uniform priors and p_N=p_HA=p_HB, the optimum is 1/3. For two equally likely
 
 The Lean `Bayes.lean` module uses **natural-number unnormalized joint masses** (likelihood times a common normalization factor) and proves the pointwise bound, its finite-table sum, and **attainment by an explicit argmax classifier**. It does not yet formalize normalized probability statements, conditional kernels, or a stochastic extension.
 
+### Five-way intervention randomization is not uniform three-way human detection
+
+If the controller samples uniformly from all five hidden interventions, the scoring labels collapse three physical states into `no human`: `unchanged`, `machine-A replacement`, `machine-B replacement`. Consequently,
+
+    mu(no human) = 3/5, mu(human A) = 1/5, mu(human B) = 1/5.
+
+For perfectly indistinguishable public transcripts under these class-conditional laws, the best **forced-choice classification accuracy is 3/5, not 1/3**. The 1/3 value requires an explicitly uniform *three-way class prior*. No universal human-detection baseline follows from the game's open rules. This distinction matters before interpreting any conductor's apparent success.
+
 ## 4. Two different information monotonicity statements
 
 **Observed refinement:** If conductor observes Y and the poorer observation X=f(Y), an ideal unconstrained classifier with Y can emulate any X-based classifier. For the same fixed joint distribution, its optimal Bayes accuracy cannot decrease. This does not imply longer interactions help a real, resource-limited conductor, or that strategic respondents remain stationary.
