@@ -211,7 +211,7 @@ class AnalysisTests(unittest.TestCase):
         game.act("controller", "reveal", {})
         audit = audit_trial(row, game.export())
         self.assertTrue(audit["valid"], audit["errors"])
-        self.assertEqual(audit["p_human"], .1 - 1e-16 if False else audit["p_human"])
+        self.assertAlmostEqual(audit["p_human"], .1)
 
     def test_cli_refuses_to_overwrite_output_and_writes_private_summary(self):
         plan, records = full_synthetic_data()
