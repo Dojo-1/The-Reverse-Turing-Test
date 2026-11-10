@@ -54,7 +54,7 @@ def one_turn_fixture(*, lag_ms=100., answered=True):
         "timing_violations": [],
     }
     start1, end1 = 99_000_000_000, 99_005_000_000
-    start2, end2 = 100_000_000_000, int(100_000_000_000 + lag_ms * 1e6)
+    start2, end2 = 99_500_000_000, int(100_000_000_000 + lag_ms * 1e6)
     public_reads = []
     for i, event in enumerate(public, 1):
         public_reads.append({
