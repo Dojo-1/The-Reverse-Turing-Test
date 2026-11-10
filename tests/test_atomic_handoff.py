@@ -109,6 +109,37 @@ class AtomicHandoffTests(unittest.TestCase):
                     })
                 self.assertEqual(game.export(), before)
 
+    def test_clock_failure_before_commit_cannot_leak_a_private_note(self):
+        class FaultClock:
+            def __init__(self):
+                self.calls = 0
+            def __call__(self):
+                self.calls += 1
+                if self.calls == 3:
+                    raise RuntimeError("simulated monotonic clock fault")
+                return 100.0
+
+        faulty = FaultClock()
+        game = Game(clock=faulty)
+        game.act("controller", "configure_pacing", {"seconds": 10})
+        game.act("controller", "configure", {
+            "links": {"A_to_B": True, "B_to_A": True}
+        })
+        game.act("conductor", "ask", {
+            "channel": "A", "body": "Atomic failure injection"
+        })
+        original_sequence = game.sequence
+        with self.assertRaisesRegex(RuntimeError, "clock fault"):
+            game.act("machine_A", "respond", {
+                "body": "never accepted",
+                "private_handoff": "NEVER DELIVER",
+            })
+        self.assertEqual(game.sequence, original_sequence)
+        self.assertFalse(game.private)
+        self.assertIsNone(game.pending_release["answer"])
+        self.assertFalse(any(x["kind"] == "atomic_response" for x in game.audit))
+        self.assertEqual(len(game.public), 1)
+
     def test_rejection_of_duplicate_answer_does_not_transmit_second_note(self):
         game, _ = configured(True, paced=True)
         game.act("machine_A", "respond", {
