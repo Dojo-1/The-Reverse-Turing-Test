@@ -65,6 +65,42 @@ theorem totalScore_le_ceiling
         rowUpper w + scoreCeiling ws
       exact Nat.add_le_add (selected_le_upper w (judge w)) ih
 
+
+/-- Choose the larger of two joint masses, breaking ties toward the first. -/
+def bestOfTwo (w : WeightedRow) (a b : Hypothesis) : Hypothesis :=
+  if w a ≥ w b then a else b
+
+theorem bestOfTwo_mass (w : WeightedRow) (a b : Hypothesis) :
+    w (bestOfTwo w a b) = max (w a) (w b) := by
+  by_cases h : w a ≥ w b
+  · simp [bestOfTwo, h, Nat.max_eq_left h]
+  · have hba : w a ≤ w b := by omega
+    simp [bestOfTwo, h, Nat.max_eq_right hba]
+
+/-- A deterministic maximizer for the three human-location hypotheses. -/
+def bestHypothesis (w : WeightedRow) : Hypothesis :=
+  bestOfTwo w (bestOfTwo w .noHuman .humanA) .humanB
+
+theorem bestHypothesis_attains (w : WeightedRow) :
+    selectedMass w (bestHypothesis w) = rowUpper w := by
+  calc
+    selectedMass w (bestHypothesis w) =
+        max (w (bestOfTwo w .noHuman .humanA)) (w .humanB) :=
+      bestOfTwo_mass w (bestOfTwo w .noHuman .humanA) .humanB
+    _ = max (max (w .noHuman) (w .humanA)) (w .humanB) := by
+      rw [bestOfTwo_mass w .noHuman .humanA]
+    _ = rowUpper w := Nat.max_assoc _ _ _
+
+/-- Attainment: pointwise maximum-likelihood decisions achieve the upper bound. -/
+theorem totalScore_best_eq_ceiling (rows : List WeightedRow) :
+    totalScore rows bestHypothesis = scoreCeiling rows := by
+  induction rows with
+  | nil => rfl
+  | cons w ws ih =>
+      change selectedMass w (bestHypothesis w) + totalScore ws bestHypothesis =
+        rowUpper w + scoreCeiling ws
+      rw [bestHypothesis_attains, ih]
+
 /-- If all three joint masses are equal, the per-observation ceiling is that mass. -/
 theorem equal_weight_ceiling (w : WeightedRow)
     (ha : w .humanA = w .noHuman)
