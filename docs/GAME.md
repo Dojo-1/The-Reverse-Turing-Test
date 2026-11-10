@@ -1,4 +1,4 @@
-# R0: Dynamic Bayesian reverse-imitation game
+# R0–R1: Dynamic Bayesian reverse-imitation game
 
 **Status:** proposed mathematical model, not a measured experiment. Date: 2026-11-10.
 
@@ -12,7 +12,7 @@ For finite horizon T, histories are h_t = ((q_0,a_0),...,(q_(t-1),a_(t-1))). A s
 
 The hidden state must not be collapsed to a binary label when machine-machine substitutions are included. Separately distinguish *change detection*, *human detection*, and *localization*.
 
-## Established mathematical benchmarks (external mathematical derivations, not yet Lean-formalized)
+## Established mathematical benchmarks (finite weighted argmax core now Lean-checked; probability semantics remain external)
 
 For finite observation X, hidden class S, class prior μ, conditional observation law P_s(x), and a zero-one-loss classifier g:X→S, its accuracy is Σ_x μ(g(x)) P_(g(x))(x). The optimal deterministic classification accuracy is
 
@@ -46,7 +46,7 @@ Human/machine denotes provenance of the respondent in this experiment. Intellige
 ## Proposed preregistered pilot
 
 - 12 human substitutions balanced between A/B; 6 machine substitutions; 6 unchanged controls.
-- Independent controller, committed hidden randomization, fixed horizon, blinded conductor, no metadata/timing leaks.
+- Independent controller, committed hidden randomization, a stopping rule fixed *for that trial* (not universal), blinded conductor, no metadata/timing leaks.
 - Primary: probability assigned to correct three-way human-location hypothesis; report calibration and false positives.
 - Secondary: change-point localization, machine-substitution confusions, longitudinal behavior, claimed self-attestation evidence.
 - Preserve all seeds, prompts, models, controller decisions, and failures.
@@ -55,3 +55,7 @@ Human/machine denotes provenance of the respondent in this experiment. Intellige
 ## Formalization boundary
 
 Lean R0 proves finite *deterministic* structural facts (label involution; observation collision; response-policy equality implies trace equality). Extension R1 must implement finite probability masses, likelihoods, Bayes optimal classification, and explicit assumptions. Extension R2: randomized adaptive policies and conditional distribution equality. Extension R3: equilibrium only after exact utilities/information sets are defined.
+
+## Connected R1 extension
+
+The additional directed information graph, side-channel controls, formal connectivity/origin confounding theorem and finite weighted three-way Bayes optimum are in [MATHEMATICS.md](MATHEMATICS.md). For actual play use [HOST_AND_PLAY.md](HOST_AND_PLAY.md), [MACHINE_PLAYERS.md](MACHINE_PLAYERS.md), and [HUMAN_PLAYER.md](HUMAN_PLAYER.md).
