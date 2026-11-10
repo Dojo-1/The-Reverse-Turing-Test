@@ -31,6 +31,8 @@ The browser interface is an authenticated **manual relay**: copy a machine model
 7. Once the verdict is locked, the controller presses **Reveal outcome**. Both views can then see the outcome; the controller sees the correct class and Brier score.
 8. The controller presses **Export audit JSON** to save all public text, private messages, intervention history, and verdict. The JSON contains no participant bearer tokens. The engine otherwise keeps the state **in memory only**: exit without export and the trial is lost.
 
+**Prior warning:** Under the optional **uniform five-way draw**, the scored three-way hypotheses are *not* equally likely: three states (`unchanged`, `machineA`, `machineB`) collapse to `no_human`, so the induced prior is `(0.6, 0.2, 0.2)`. If there is no discriminating evidence, an optimal zero-one-loss conductor would guess `no_human` and achieve 60% under this particular draw. A conductor using a different controller-specified distribution must use that trial's prior instead. The UI intentionally does not prefill probabilities.
+
 ### Player-facing quick instructions
 
 - **C**: ask adversarial questions, including Gödel/Curry-style logic and long-horizon consistency checks if you wish. Distinguish human origin from missing connection or machine replacement. Give calibrated probabilities; do not claim a proof of absent intelligence merely because something is a machine.
