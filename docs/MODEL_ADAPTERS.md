@@ -125,3 +125,9 @@ lake build
 The unit and loopback tests use a fake Chat Completions server. No real model-provider credentials or network-based LLM calls are exercised by CI. A green check establishes tested properties of the adapter under those mocks, not an independently reproduced human-versus-machine result.
 
 **Research boundary:** model responses, proofs, self-claims of machinehood and alleged non-intelligence are different forms of evidence. The game must not conflate them.
+
+## R5 fixed pilot: automatic conductor pause
+
+When the independent controller enables `RTT-PILOT/1`, the machine conductor must be launched with `--question-budget 8`. It asks A and B once each, waits while the controller privately commits the assigned intervention, and resumes **only after the controller publishes the explicit, condition-independent continuation marker**. This marker is the same across all hidden participant conditions.
+
+R5 enforces a fixed 45-second answer gate, forbids a ninth question and keeps the controller manual. The human remains a manual browser participant. See [STRICT_PILOT.md](STRICT_PILOT.md). A separate [observer sidecar](OBSERVER.md) can record first-seen event intervals but does **not** prove the conductor's actual delivery time. Do not report human-vs-machine results until independently controlled participant trials have been conducted.
