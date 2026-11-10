@@ -106,3 +106,12 @@ Evidence anchor: verify actual R2 PR head and [Actions runs](https://github.com/
 - **R, retired claim:** a syntactically valid manual `configure_pilot` session is **not** proof that the 24-trial assignment was respected. Such sessions remain playable rehearsals but are inadmissible as study rows.
 - **M, absent:** No real human or model trial occurred. This software check **does not attest independent preregistration date**, protect against a malicious controller/server, verify the model provider's state, or imply any effect of lost private communication on origin recognition.
 - **Stop rule:** any wrong prepublished commitment, wrongly bound trial, mismatched intervention, or audit inconsistency invalidates the corresponding allocated trial; never reassign it to a convenient later run.
+
+
+## R10 — Atomic machine handoffs (A; not experimental M)
+
+- **Bug fixed:** prior R7 machine adapter emitted `whisper` before `answer`, permitting a delivered private note without a paired public answer on timeout or failure. This was a genuine partial-commit path, not a proven human-origin effect.
+- **A, implemented:** `Agent._respondent_step(private_handoff=True)` now sends one `respond` action in either link condition. `Game._post_respondent` prevalidates both fields, role, deadline and duplicate status; prepares events before committing private note + answer. Link OFF discards the generated note without storing it. A second clock check closes a deadline-crossing race. The legacy manually sent `whisper` and `answer` paths remain separate by design.
+- **A, tested:** `tests/test_atomic_handoff.py` provides matching ON/OFF request-count and prompt tests, malformed/overlong cases, duplicate/inactive/expired submissions, injected clock failure, deadline TOCTOU, a real HTTP authorization/transmission check and manual-operation regression. Passing source-authored CI is not independent model execution.
+- **M, absent:** No real provider/token-usage parity measurements or human trials. The public-message and private-note semantics are still text based, not transferred KV state. No theorem states that equal request counts imply equal compute or experimental detectability.
+- **Kill condition:** any private note delivered on an invalid, failed, duplicate or late paired response invalidates the atomic-transaction claim and the affected pilot timing/communication control.
