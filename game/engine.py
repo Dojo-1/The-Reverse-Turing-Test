@@ -199,12 +199,16 @@ class Game:
         if action == "configure":
             if self.intervened or self.revealed or self.verdict is not None:
                 raise RuleError("Baseline topology is locked after intervention or verdict")
+            if self.pacing_seconds is not None and self.public:
+                raise RuleError("Paced-trial baseline links lock at the first question")
             self._configure_links(data.get("links"))
             self.audit.append(self._event("configure", links=dict(self.links)))
             return
         if action in ("intervene", "random_intervene"):
             if self.intervened or self.revealed or self.verdict is not None:
                 raise RuleError("Only one hidden intervention is allowed before a verdict")
+            if self.pacing_seconds is not None and self.pending_release is not None:
+                raise RuleError("Paced intervention must occur between released turns")
             if not self._baseline_ready():
                 raise RuleError("First obtain a genuine answer from both A and B")
             randomized = action == "random_intervene"
