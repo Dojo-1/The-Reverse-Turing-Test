@@ -19,7 +19,7 @@ class RuleError(ValueError):
 class Game:
     ROLES = (
         "controller", "conductor", "machine_A", "machine_B",
-        "replacement_A", "replacement_B", "human",
+        "replacement_A", "replacement_B", "human", "observer",
     )
     CONDITIONS = ("unchanged", "humanA", "humanB", "machineA", "machineB")
     HYPOTHESES = ("no_human", "human_A", "human_B")
@@ -479,6 +479,8 @@ class Game:
             self._settle_due()
             if self.pilot_aborted and role != "controller":
                 raise RuleError("Pilot is aborted; no further player actions")
+            if role == "observer":
+                raise RuleError("Observer credential is read-only")
             if role == "controller":
                 self._post_controller(action, data)
             elif role == "conductor":
@@ -515,6 +517,11 @@ class Game:
                     "timing_violations": list(self.timing_violations),
                     "public": list(self.public), "private": list(self.private),
                     "audit": list(self.audit),
+                }
+            if role == "observer":
+                return {
+                    "role": "observer",
+                    "public": self._project(self.public),
                 }
             if role == "conductor":
                 # No active-role, link, intervention type, substitution time or
