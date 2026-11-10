@@ -303,5 +303,5 @@ if (!token) {
     "Missing participant link. Ask the controller for your own URL, not the controller's."));
 } else {
   refresh();
-  window.setInterval(refresh, 1600);
+  window.setInterval(refresh, 250);
 }
