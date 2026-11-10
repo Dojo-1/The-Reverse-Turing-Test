@@ -112,6 +112,9 @@ def audit_trial(assignment: dict, record: dict | None, witness: list[dict] | Non
     if not isinstance(events, list) or not isinstance(audit, list):
         errors.append("missing_event_or_audit_lists")
         return result
+    if any(not isinstance(event, dict) for event in events + audit):
+        errors.append("malformed_event_entry")
+        return result
     try:
         if not all(type(x.get("sequence")) is int for x in events + audit):
             raise ValueError("sequence")
@@ -232,6 +235,9 @@ def validate_witness(trial_id, raw_public, lines, errors):
     if not isinstance(lines, list) or not lines:
         errors.append("witness_missing_records")
         return
+    if any(not isinstance(entry, dict) for entry in lines):
+        errors.append("witness_malformed_entry")
+        return
     head = lines[0]
     if (head.get("type") != "witness_header"
             or head.get("schema") != "reverse-turing-observer/v1"
@@ -341,6 +347,8 @@ def main(argv=None):
         plan = _load_json(Path(args.private_schedule))
         published = _load_json(Path(args.public_commitment))
         directory = Path(args.records_dir)
+        if not directory.is_dir():
+            raise EvidenceError("Records directory does not exist or is not a directory")
         records = {p.stem: _load_json(p) for p in directory.glob("RTT-*.json")}
         witnesses = None
         if args.witness_dir:
