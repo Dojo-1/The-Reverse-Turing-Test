@@ -66,7 +66,8 @@ def _first(events: list[dict], kind: str):
     return next((event for event in events if event.get("kind") == kind), None)
 
 
-def audit_trial(assignment: dict, record: dict | None, witness: list[dict] | None = None):
+def audit_trial(assignment: dict, record: dict | None, witness: list[dict] | None = None,
+                *, expected_commitment: str | None = None):
     """Compare source export to the *assigned* intervention, not to its claim alone.
 
     Returns all observed problems; no selection or repairing of invalid runs.
@@ -94,6 +95,17 @@ def audit_trial(assignment: dict, record: dict | None, witness: list[dict] | Non
 
     require(record.get("schema") == "reverse-turing-trial/v1", "wrong_export_schema")
     require(record.get("pilot_enabled") is True, "pilot_not_enabled")
+    require(record.get("pilot_schedule_bound") is True,
+            "pilot_assignment_unbound")
+    require(record.get("pilot_trial_id") == trial_id, "pilot_trial_id_mismatch")
+    require(record.get("pilot_assignment") == assignment,
+            "pilot_assignment_receipt_mismatch")
+    require(type(record.get("pilot_seed_commitment")) is str
+            and len(record["pilot_seed_commitment"]) == 64,
+            "pilot_commitment_missing")
+    if expected_commitment is not None:
+        require(record.get("pilot_seed_commitment") == expected_commitment,
+                "pilot_commitment_mismatch")
     require(record.get("pilot_aborted") is False, "pilot_aborted")
     require(record.get("pilot_valid_for_primary") is True, "engine_pilot_invalid")
     require(record.get("revealed") is True, "trial_not_revealed")
@@ -171,10 +183,18 @@ def audit_trial(assignment: dict, record: dict | None, witness: list[dict] | Non
         require(setups[0].get("protocol") == "RTT-PILOT/1"
                 and setups[0].get("gate_seconds") == 45.0,
                 "pilot_setup_differs_from_preregistration")
+        require(setups[0].get("assignment_bound") is True
+                and setups[0].get("trial_id") == trial_id,
+                "pilot_setup_unbound_or_wrong_trial")
+        require(setups[0].get("schedule_commitment") ==
+                record.get("pilot_seed_commitment"),
+                "pilot_setup_commitment_mismatch")
     if transitions:
         trans = transitions[0]
         require(trans.get("condition") == assignment["condition"],
                 "intervention_audit_mismatch")
+        require(trans.get("selection") == "sealed_schedule",
+                "intervention_not_sealed")
         require(trans.get("links") == expected_links, "intervention_link_audit_mismatch")
         require(trans.get("human_gateway") is assignment["human_gateway"],
                 "intervention_gateway_audit_mismatch")
@@ -278,7 +298,8 @@ def analyze(plan: dict, records: dict[str, dict], *, witnesses=None, published=N
                             ", ".join(unexpected))
     rows = [
         audit_trial(assignment, records.get(assignment["trial_id"]),
-                    None if witnesses is None else witnesses.get(assignment["trial_id"]))
+                    None if witnesses is None else witnesses.get(assignment["trial_id"]),
+                    expected_commitment=plan["commitment"])
         for assignment in plan["trials"]
     ]
     buckets = defaultdict(list)
