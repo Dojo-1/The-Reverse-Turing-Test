@@ -355,9 +355,13 @@ class Agent:
                 obs,
             )
             response = parse_dual_response(self.model.complete(messages))
-            if view.get("can_whisper") is True:
-                self.relay.act("whisper", body=response["private_handoff"])
-            self.relay.act("answer", body=response["answer"])
+            # Exactly one relay transaction in both ON and OFF conditions.
+            # The server checks the answer gate before delivering any note;
+            # OFF discards the generated private text without storing it.
+            self.relay.act(
+                "respond", body=response["answer"],
+                private_handoff=response["private_handoff"],
+            )
         else:
             messages = _prompt(
                 SYSTEM_M, "TASK:ANSWER_PUBLIC\nReply to the last unanswered question.",

@@ -483,23 +483,84 @@ class Game:
         channel = self._active_channel(role)
         if channel is None:
             raise RuleError("This participant is not currently active")
-        if action == "answer":
+        if action in ("answer", "respond"):
+            # A machine's public answer and optional private text note form
+            # ONE validated server transaction, under Game.lock. The legacy
+            # manual answer/whisper endpoints remain available independently.
+            # Crucially, no private transfer can precede a rejected/late
+            # response when the model uses "respond".
             body = self._text(data)
+            private_note = (
+                self._text({"body": data.get("private_handoff")})
+                if action == "respond" else None
+            )
+            pending = None
             if self.pacing_seconds is not None:
                 pending = self.pending_release
                 if pending is None or pending["channel"] != channel:
                     raise RuleError("No eligible pending question for this channel")
                 if pending["answer"] is not None:
                     raise RuleError("Response is already buffered for the release boundary")
+            transmit = False
+            if private_note is not None:
+                direction = "A_to_B" if channel == "A" else "B_to_A"
+                transmit = self._allows_link(role) and self.links[direction]
+            # Clock/sample and event construction are completed BEFORE any
+            # visible state is changed. If an event builder fails, restore
+            # sequence numbering and publish neither half of the reply.
+            accepted_at = self._clock() if pending is not None else None
+            if pending is not None and accepted_at >= pending["due"]:
+                # The initial Game.act deadline check and this response
+                # timestamp are not simultaneous. A submission crossing
+                # the boundary between them must still be a timeout.
+                self._settle_due()
+                raise RuleError("Response arrived at or after the release deadline")
+            old_sequence = self.sequence
+            try:
+                private_event = (
+                    self._event(
+                        "whisper", from_channel=channel,
+                        to_channel="B" if channel == "A" else "A",
+                        body=private_note,
+                    ) if transmit else None
+                )
+                answer_event = (
+                    self._event(
+                        "answer", channel=channel, speaker=channel, body=body,
+                    ) if pending is None else None
+                )
+                submission_event = (
+                    self._event(
+                        "paced_submission", channel=channel,
+                        question_sequence=pending["question_sequence"],
+                        accepted_at_monotonic=accepted_at,
+                    ) if pending is not None else None
+                )
+                transaction_event = (
+                    self._event(
+                        "atomic_response", channel=channel,
+                        private_transmitted=transmit,
+                        private_discarded=not transmit,
+                        question_sequence=(
+                            pending["question_sequence"]
+                            if pending is not None else None
+                        ),
+                    ) if private_note is not None else None
+                )
+            except Exception:
+                self.sequence = old_sequence
+                raise
+            # Commit: all fields have been checked and all events prepared.
+            if private_event is not None:
+                self.private.append(private_event)
+            if pending is not None:
                 pending["answer"] = body
-                pending["submitted_at"] = self._clock()
-                self.audit.append(self._event(
-                    "paced_submission", channel=channel,
-                    question_sequence=pending["question_sequence"],
-                    accepted_at_monotonic=pending["submitted_at"],
-                ))
+                pending["submitted_at"] = accepted_at
+                self.audit.append(submission_event)
             else:
-                self.public.append(self._event("answer", channel=channel, speaker=channel, body=body))
+                self.public.append(answer_event)
+            if transaction_event is not None:
+                self.audit.append(transaction_event)
             return
         if action == "whisper":
             if not self._allows_link(role):

@@ -50,7 +50,7 @@ python -m game.agents --role machine_A --provider compatible \
   --model YOUR_MODEL_ID
 ```
 
-Set `RTT_ROLE_TOKEN` to **machine_A's** token in that process first. Use distinct tokens and isolated model contexts for machine B and conductor C. `--private-handoff` optionally enables machine-generated **text** notes; use the **same flag across link-ON and link-OFF machine controls**. Notes are sent only over permitted links. See [model setup](docs/MODEL_ADAPTERS.md).
+Set `RTT_ROLE_TOKEN` to **machine_A's** token in that process first. Use distinct tokens and isolated model contexts for machine B and conductor C. `--private-handoff` optionally generates **public and private text together in one atomic relay action**; use the same flag in link-ON and link-OFF machine controls. OFF notes are discarded. See [model setup](docs/MODEL_ADAPTERS.md).
 
 ## 03 · Two ways to play
 
