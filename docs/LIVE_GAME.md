@@ -25,7 +25,7 @@ The browser interface is an authenticated **manual relay**: copy a machine model
 1. Open **controller**, **conductor**, **machine_A**, **machine_B** links in separate browser windows.
 2. If using a directed private text link, the controller enables it using **Set baseline links**. A shared text handoff is a simulated side channel, *not a KV-cache transfer*.
 3. C asks at least one question of A and B. Both genuine machines answer. The engine forbids intervention before receiving an answer from both.
-4. The controller privately chooses the intervention: **humanA**, **humanB**, **machineA**, **machineB**, or **unchanged**. It can independently change A→B and B→A private links. For a human substitution, it can authorize the human's access to a relay via **human gateway**.
+4. The controller privately selects the intervention: **humanA**, **humanB**, **machineA**, **machineB**, or **unchanged**. Choose explicitly, or press **Draw randomly (five states)** for a cryptographically sampled uniform five-way choice. The independent controller sees the realized label; C does not. The controller can independently change A→B and B→A private links. For a human substitution, it can authorize a relay via **human gateway**. A gateway option chosen during a random draw is silently disabled if the sampled state has no human.
 5. The controller hands the appropriate *new participant credential* to the replacement machine or human. The old respondent's credential becomes inactive. The new participant sees that channel's public history but not the other channel's public messages. A human without an authorized gateway sees no private messages.
 6. C keeps interrogating, then commits a three-way vector **P(no human), P(human A), P(human B)** summing to 1, plus optional evidence. Crucially, **C can submit before any intervention**, in which case the controller must accept a no-change trial. This avoids revealing intervention timing through an API error.
 7. Once the verdict is locked, the controller presses **Reveal outcome**. Both views can then see the outcome; the controller sees the correct class and Brier score.
@@ -43,6 +43,8 @@ See the fuller [human](HUMAN_PLAYER.md), [machine](MACHINE_PLAYERS.md), and [fac
 ## Threat model and limitations
 
 This is for **local, consented research**. Do not run it publicly on the internet, handle sensitive information, or collect identifiable data without consent. Tokens grant role access; anyone who knows a token can impersonate that role. A controller at the same keyboard sees all URLs. The service does not implement identity verification, cryptographically committed randomization, independent attestation, privacy-preserving audit export, TLS, database persistence, multi-instance coordination, or real KV transfer.
+
+Random choice uses Python's `secrets.choice`, which does not expose a reproducible seed. This is useful for a local pilot but is **not** an independently witnessed or cryptographically precommitted allocation procedure. The host can rerun trials; a scientifically meaningful result requires a frozen protocol and accounting for all attempts.
 
 The browser is for human operators *relaying* external model responses. Participant independence is a requirement of the experimental protocol, not something the software can guarantee. In particular, sharing one upstream model context between A and B would invalidate the independent-session condition.
 
