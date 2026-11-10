@@ -14,9 +14,10 @@ import stat
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from experiments.check_conductor_delivery import assess_delivery, main
-from game.agents import AdapterError, Agent, RelayClient, ScriptedDemo
+from game.agents import AdapterError, Agent, RelayClient, ScriptedDemo, main as actor_main
 from game.conductor_receipt import ConductorReceipt
 from game.engine import Game
 from game.server import handler_factory, run_release_worker
@@ -135,6 +136,13 @@ class OfflineDeliveryTests(unittest.TestCase):
         report = assess_delivery(controller, delayed, require_complete_pilot=False)
         self.assertIn("conductor_log_started_after_public_events", report["errors"])
 
+    def test_duplicate_controller_sequences_are_rejected(self):
+        controller, trace = one_turn_fixture()
+        controller["public"][1]["sequence"] = controller["public"][0]["sequence"]
+        report = assess_delivery(controller, trace, require_complete_pilot=False)
+        self.assertIn("controller_public_payload_invalid", report["errors"])
+        self.assertFalse(report["within_one_second_given_same_clock"])
+
     def test_cli_refuses_to_overwrite_and_records_negative_control(self):
         controller, trace = one_turn_fixture(lag_ms=1800)
         with tempfile.TemporaryDirectory() as td:
@@ -159,6 +167,63 @@ class OfflineDeliveryTests(unittest.TestCase):
 
 
 class ConductorClientTests(unittest.TestCase):
+    def test_model_receives_only_original_view_without_timing_metadata(self):
+        class Model:
+            def __init__(self):
+                self.calls = []
+            def complete(self, messages):
+                self.calls.append(messages)
+                return "What is your observable origin evidence?"
+        class Relay:
+            def __init__(self):
+                self.actions = []
+            def view(self):
+                return {
+                    "role": "conductor", "public": [], "pilot_phase": None,
+                    "verdict": None, "revealed": False, "outcome": None,
+                }
+            def act(self, action, **kwargs):
+                self.actions.append((action, kwargs))
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "C.jsonl"
+            model = Model()
+            original = Relay()
+            measured = ConductorReceipt(
+                original, path, "LOCAL-UNIT", poll_seconds=0.25
+            )
+            try:
+                self.assertEqual(
+                    Agent("conductor", measured, model, question_budget=2).step(),
+                    "asked"
+                )
+            finally:
+                measured.close("rehearsal")
+            prompt = json.dumps(model.calls)
+            self.assertNotIn("monotonic", prompt)
+            self.assertNotIn("request_started", prompt)
+            self.assertNotIn("response_complete", prompt)
+            self.assertNotIn("receipt", prompt)
+            self.assertEqual(original.actions[0][0], "ask")
+            self.assertIn("conductor_poll", path.read_text(encoding="utf-8"))
+
+    def test_conductor_only_cli_flags_fail_closed(self):
+        with tempfile.TemporaryDirectory() as td, patch.dict(
+            os.environ, {"RTT_ROLE_TOKEN": "dummy-not-used-for-network"}
+        ):
+            path = str(Path(td) / "C.jsonl")
+            forbidden = actor_main([
+                "--role", "machine_A", "--provider", "scripted",
+                "--trial-id", "RTT-01", "--receipt-log", path,
+            ])
+            self.assertEqual(forbidden, 2)
+            incomplete = actor_main([
+                "--role", "conductor", "--provider", "scripted",
+                "--receipt-log", path,
+            ])
+            self.assertEqual(incomplete, 2)
+            self.assertFalse(Path(path).exists())
+
+
     def test_real_local_relay_conductor_poll_is_measured_in_same_client(self):
         game = Game()
         http = ThreadingHTTPServer(("127.0.0.1", 0), handler_factory(game))
