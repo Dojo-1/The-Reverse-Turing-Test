@@ -153,6 +153,32 @@ class AtomicHandoffTests(unittest.TestCase):
         self.assertEqual(game.export(), before)
         self.assertEqual([p["body"] for p in game.private], ["FIRST SECRET"])
 
+    def test_response_crossing_gate_during_server_handling_is_rejected(self):
+        class DeadlineCrossingClock:
+            def __init__(self):
+                self.values = iter([100.0, 109.999, 110.001, 110.002])
+            def __call__(self):
+                return next(self.values)
+
+        game = Game(clock=DeadlineCrossingClock())
+        game.act("controller", "configure_pacing", {"seconds": 10})
+        game.act("controller", "configure", {
+            "links": {"A_to_B": True, "B_to_A": True}
+        })
+        game.act("conductor", "ask", {
+            "channel": "A", "body": "Deadline edge"
+        })
+        with self.assertRaisesRegex(RuleError, "after the release deadline"):
+            game.act("machine_A", "respond", {
+                "body": "late by 1ms",
+                "private_handoff": "THIS MUST NEVER BE DELIVERED",
+            })
+        self.assertEqual(game.private, [])
+        self.assertEqual(game.public[-1]["kind"], "timeout")
+        self.assertIsNone(game.pending_release)
+        self.assertFalse(any(a["kind"] == "atomic_response" for a in game.audit))
+        self.assertEqual(game.timing_violations[0]["reason"], "deadline_miss")
+
     def test_expired_gate_never_allows_last_second_private_only_transfer(self):
         game, clock = configured(True, paced=True)
         clock.advance(10)
