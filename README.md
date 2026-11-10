@@ -68,6 +68,19 @@ The conductor can report a probability distribution over *no human*, *human in A
 
 **Ready to play?** The [facilitator's guide](docs/HOST_AND_PLAY.md) includes copy-ready prompts for each participant. You can run a manual text-only game with separate chat sessions and an independent host; no software installation is required.
 
+<details>
+<summary><strong>↳ Open the game: a no-install first encounter</strong></summary>
+
+1. Set up **three isolated machine sessions**: one conductor C and two respondents A/B. Appoint an independent human controller; recruit one willing human impersonator.
+2. Give each session its [role-specific instructions](docs/MACHINE_PLAYERS.md). Have C question both respondents while they are genuine machines.
+3. The controller privately selects the intervention under the [trial rules](docs/HOST_AND_PLAY.md). The human may take over a channel, a machine may replace another, or nothing may happen. Do not let C see the switch.
+4. Continue the conversation. Before revealing anything, ask C to commit to **P(no human), P(human A), P(human B)** and briefly say which observations support its judgment.
+5. Reveal the actual intervention. **Was C detecting a person, a change of behavior, or an information channel?** Record the distinction.
+
+*One encounter is a game, not a population-level result. Keep the conditions and the transcript.*
+
+</details>
+
 ### 04 / The telepathy problem (without telepathy)
 
 Turing famously entertained the possibility of extrasensory perception interfering with the imitation game. His imagined defense was a *telepathy-proof room*.
@@ -75,6 +88,14 @@ Turing famously entertained the possibility of extrasensory perception interferi
 Our twist: what if machines have an **actual, nonlinguistic communication pathway**—an authorized machine-to-machine exchange of state—unavailable to the human impersonator?
 
 A machine conductor might detect a *missing channel*, not a *human*. That is an experimentally testable confound, and precisely why we include disconnected-machine controls.
+
+<div align="center">
+
+<img src="assets/channel-trap.svg" width="100%" alt="Four trial conditions: a human with an authorized machine gateway and a connected machine share a link-on state; an isolated human and a disconnected machine share a link-off state. Connectivity alone does not identify origin.">
+
+<sub>Two questions, not one: <strong>who is participating?</strong> and <strong>who can access the channel?</strong></sub>
+
+</div>
 
 Inspired by [*Swarm Telepathy: Prefill-Free KV-Cache Transfer Across Families*](https://arxiv.org/abs/2610.15095), the framework treats private communication as a **directed information edge**. The formal graph is not a functioning KV translator. The [research boundary and controls](docs/SWAT_SCOPE.md) explain the difference between shared-text simulations, actual cache transfer, and claims the evidence does not support.
 
