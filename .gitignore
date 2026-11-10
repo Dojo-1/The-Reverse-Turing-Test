@@ -24,6 +24,9 @@ Thumbs.db
 !.env.example
 private/
 .secrets/
+records/
+witness/
+trial-exports/
 rtt-pilot-private*.json
 private-witness-*.jsonl
 pilot-audit*.json
