@@ -427,7 +427,17 @@ def main(argv=None):
     parser.add_argument("--max-output-tokens", type=int, default=256)
     parser.add_argument("--poll-seconds", type=float, default=1.0)
     parser.add_argument("--idle-timeout", type=float, default=300.0)
+    parser.add_argument(
+        "--receipt-log",
+        help="private, non-overwriting JSONL of the actual conductor's HTTP view times",
+    )
+    parser.add_argument(
+        "--trial-id",
+        help="assigned private trial ID (required with --receipt-log)",
+    )
     args = parser.parse_args(argv)
+    receipt = None
+    end_status = "error"
     try:
         token = os.environ.get("RTT_ROLE_TOKEN", "")
         relay = RelayClient(args.relay, token)
@@ -445,6 +455,17 @@ def main(argv=None):
             raise AdapterError("poll-seconds must be between 0.1 and 60")
         if args.idle_timeout <= 0:
             raise AdapterError("idle-timeout must be positive")
+        if bool(args.receipt_log) != bool(args.trial_id):
+            raise AdapterError("--receipt-log and --trial-id must be used together")
+        if args.receipt_log:
+            if args.role != "conductor":
+                raise AdapterError("Only the machine conductor may create a C receipt log")
+            from .conductor_receipt import ConductorReceipt
+            receipt = ConductorReceipt(
+                relay, args.receipt_log, args.trial_id,
+                poll_seconds=args.poll_seconds,
+            )
+            relay = receipt
         agent = Agent(
             args.role, relay, model, question_budget=args.question_budget,
             context_events=args.context_events,
@@ -455,21 +476,27 @@ def main(argv=None):
         while True:
             status = agent.step()
             if status == "done" or status == "verdict":
+                end_status = status
                 print("R3 actor finished:", status, flush=True)
                 return 0
             if status != "waiting":
                 print("R3 actor completed:", status, flush=True)
                 last_progress = time.monotonic()
             if time.monotonic() - last_progress > args.idle_timeout:
+                end_status = "idle_timeout"
                 print("R3 actor idle timeout; relay remains intact.", flush=True)
-                return 0
+                return 2 if receipt is not None else 0
             time.sleep(args.poll_seconds)
-    except (AdapterError, ValueError) as error:
+    except (AdapterError, ValueError, OSError) as error:
         print("R3 actor error:", str(error), flush=True)
         return 2
     except KeyboardInterrupt:
+        end_status = "interrupted"
         print("R3 actor stopped by operator.", flush=True)
-        return 0
+        return 130 if receipt is not None else 0
+    finally:
+        if receipt is not None:
+            receipt.close(status=end_status)
 
 
 if __name__ == "__main__":
