@@ -6,13 +6,14 @@ OS queues or remote model performance. The clock is a controlled test witness.
 import json
 from http.server import ThreadingHTTPServer
 import threading
+import time
 import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from game.agents import Agent, AdapterError, ScriptedDemo
 from game.engine import Game, RuleError
-from game.server import handler_factory
+from game.server import handler_factory, run_release_worker
 
 
 class FakeClock:
@@ -157,6 +158,59 @@ class PacingEngineTests(unittest.TestCase):
         self.game.view("conductor")
         self.assertEqual(agent.step(), "waiting")
         self.assertEqual(len(self.game.public), 2)
+
+    def test_publishing_after_tolerance_is_an_explicit_violation(self):
+        configure(self.game, 10)
+        self.game.act("conductor", "ask", {"channel": "A", "body": "Deadline"})
+        self.game.act("machine_A", "answer", {"body": "Buffered answer"})
+        self.clock.advance(11.5)
+        self.assertEqual(
+            self.game.view("conductor")["public"][-1]["body"],
+            "Buffered answer"
+        )
+        violations = self.game.view("controller")["timing_violations"]
+        self.assertEqual([v["reason"] for v in violations], ["late_publication"])
+        self.assertAlmostEqual(violations[0]["lateness_seconds"], 1.5)
+        self.assertIn("publication_lateness_seconds", 
+                      json.dumps(self.game.view("controller")["audit"]))
+        self.assertNotIn("publication_lateness_seconds", 
+                         json.dumps(self.game.view("conductor")))
+
+    def test_server_worker_releases_without_any_view_polls(self):
+        configure(self.game, 4)
+        self.game.act("conductor", "ask", {"channel": "A", "body": "Unpolled?"})
+        self.game.act("machine_A", "answer", {"body": "Ready ahead of deadline"})
+        self.assertEqual(len(self.game.public), 1)
+        stop = threading.Event()
+        worker = threading.Thread(
+            target=run_release_worker, args=(self.game, stop, .005),
+            daemon=True,
+        )
+        worker.start()
+        try:
+            self.clock.advance(4)
+            for _ in range(40):
+                if len(self.game.public) == 2:
+                    break
+                time.sleep(.01)
+            self.assertEqual(len(self.game.public), 2)
+            self.assertEqual(self.game.public[-1]["body"],
+                             "Ready ahead of deadline")
+            self.assertFalse(self.game.timing_violations)
+        finally:
+            stop.set()
+            worker.join(1)
+            self.assertFalse(worker.is_alive())
+
+    def test_pending_error_is_independent_of_buffered_reply(self):
+        configure(self.game, 6)
+        self.game.act("conductor", "ask", {"channel": "A", "body": "First"})
+        with self.assertRaises(RuleError) as before:
+            self.game.act("conductor", "ask", {"channel": "B", "body": "Second"})
+        self.game.act("machine_A", "answer", {"body": "Response"})
+        with self.assertRaises(RuleError) as after:
+            self.game.act("conductor", "ask", {"channel": "B", "body": "Second"})
+        self.assertEqual(str(before.exception), str(after.exception))
 
     def test_unpaced_original_semantics_unchanged(self):
         self.game.act("conductor", "ask", {"channel": "A", "body": "Question"})
