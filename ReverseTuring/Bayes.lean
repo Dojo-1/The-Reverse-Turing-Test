@@ -33,9 +33,15 @@ theorem selected_le_upper (w : WeightedRow) (h : Hypothesis) :
   | noHuman =>
       exact Nat.le_max_left _ _
   | humanA =>
-      exact (Nat.le_max_left _ _).trans (Nat.le_max_right _ _)
+      calc
+        selectedMass w .humanA = w .humanA := rfl
+        _ ≤ max (w .humanA) (w .humanB) := Nat.le_max_left _ _
+        _ ≤ rowUpper w := Nat.le_max_right _ _
   | humanB =>
-      exact (Nat.le_max_right _ _).trans (Nat.le_max_right _ _)
+      calc
+        selectedMass w .humanB = w .humanB := rfl
+        _ ≤ max (w .humanA) (w .humanB) := Nat.le_max_right _ _
+        _ ≤ rowUpper w := Nat.le_max_right _ _
 
 /-- Total unnormalized correct-classification mass for a finite observation table. -/
 def totalScore (rows : List WeightedRow) (judge : WeightedRow → Hypothesis) : Nat :=
@@ -53,7 +59,7 @@ theorem totalScore_le_ceiling
     (rows : List WeightedRow) (judge : WeightedRow → Hypothesis) :
     totalScore rows judge ≤ scoreCeiling rows := by
   induction rows with
-  | nil => rfl
+  | nil => simp [totalScore, scoreCeiling]
   | cons w ws ih =>
       change selectedMass w (judge w) + totalScore ws judge ≤
         rowUpper w + scoreCeiling ws
