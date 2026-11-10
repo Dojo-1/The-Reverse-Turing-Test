@@ -509,6 +509,12 @@ class Game:
             # visible state is changed. If an event builder fails, restore
             # sequence numbering and publish neither half of the reply.
             accepted_at = self._clock() if pending is not None else None
+            if pending is not None and accepted_at >= pending["due"]:
+                # The initial Game.act deadline check and this response
+                # timestamp are not simultaneous. A submission crossing
+                # the boundary between them must still be a timeout.
+                self._settle_due()
+                raise RuleError("Response arrived at or after the release deadline")
             old_sequence = self.sequence
             try:
                 private_event = (
