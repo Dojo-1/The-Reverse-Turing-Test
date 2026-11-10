@@ -1,0 +1,6 @@
+name = "ReverseTuring"
+version = "0.1.0"
+defaultTargets = ["ReverseTuring"]
+
+[[lean_lib]]
+name = "ReverseTuring"
