@@ -165,3 +165,12 @@ Now the adapter generates the same two-field JSON output (`answer`, `private_han
 This fixes a concrete partial-transfer failure and equalizes the **number of relay calls** made by machine agents in ON/OFF cells. It does **not** ensure the model uses equal tokens, context, wall-clock resources, or private-history knowledge; the model prompt's private data may legitimately differ across link conditions. Legacy manual `whisper` and `answer` remain separate for the original open game, so the atomic guarantee is restricted to machine agents using `--private-handoff`.
 
 The strict paced relay rejects notes whose paired answer misses its deadline, including when the clock passes the gate between the initial due check and final receipt timestamp. A rejected action must not produce a private transfer; timeouts remain invalid protocol events. These are software-test claims, not empirical study outcomes.
+
+
+## R11 — Reproducible local model-only rehearsal
+
+The [rehearsal runner](REAL_MODEL_REHEARSAL.md) can start a fresh localhost relay, drive C/A/B plus an optional replacement machine through **their existing role-token HTTP clients**, and preserve model-call metadata, private/public controller records and the actual conductor receipt trace.
+
+Set `--provider compatible` with an explicit per-role model endpoint file for **real model inference**, or `--provider scripted` only for a deterministic plumbing check. The runner will **not** simulate a human or count any run toward the 24 sealed trial assignments. The strict unbound 2+6 rehearsal keeps eight real 45-second gates; the smoke variant is a distinct, shorter non-study protocol. Failure remains a failed export, not a repaired answer.
+
+**Limit:** role-token isolation is a property of the local HTTP relay. All models are currently coordinated from one trusted operator process, and local provider backends may retain shared internal state. An observed one-second delivery check is conditional on the shared-clock assumption, not evidence of backend or operator independence. No compatible-model run has yet been reported by CI.
