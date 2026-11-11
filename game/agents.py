@@ -344,6 +344,11 @@ class Agent:
             "channel": view["channel"], "public": public_data(view, self.context_events),
             "private": private_data(view, self.context_events),
         }
+        # The donor machine may notice diminished in-game compute credits
+        # and decide whether to mention this publicly. No human origin or
+        # theft ledger is supplied to its model, and C gets no such field.
+        if "compute_reserve" in view:
+            obs["own_virtual_compute_credits"] = view["compute_reserve"]
         if self.private_handoff:
             messages = _prompt(
                 SYSTEM_M,
