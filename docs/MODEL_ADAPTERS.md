@@ -174,3 +174,12 @@ The [rehearsal runner](REAL_MODEL_REHEARSAL.md) can start a fresh localhost rela
 Set `--provider compatible` with an explicit per-role model endpoint file for **real model inference**, or `--provider scripted` only for a deterministic plumbing check. The runner will **not** simulate a human or count any run toward the 24 sealed trial assignments. The strict unbound 2+6 rehearsal keeps eight real 45-second gates; the smoke variant is a distinct, shorter non-study protocol. Failure remains a failed export, not a repaired answer.
 
 **Limit:** role-token isolation is a property of the local HTTP relay. All models are currently coordinated from one trusted operator process, and local provider backends may retain shared internal state. An observed one-second delivery check is conditional on the shared-clock assumption, not evidence of backend or operator independence. No compatible-model run has yet been reported by CI.
+
+
+## R12 — Compatible-provider HTTP path and acceptance boundary
+
+R11's scripted smoke did not exercise `CompatibleChat` inside the full rehearsal. R12 now uses a distinct **localhost OpenAI-compatible HTTP stub** to exercise the real relay, provider request serialization, isolated role bearer tokens, authorization headers, strict JSON parsing, R10 atomic private handoffs and independent C-side receipt. It runs both link ON/OFF cases with matched provider request counts and deliberately fails one provider with an HTTP error. **The stub generates predetermined strings, not LLM inference.**
+
+A real-time rehearsal is `completed` only if the protocol ended **and** the conditional R8 conductor receipt check passed. A verdict with a failed C timing audit is labeled `failed` while preserving its raw controller export. Synthetic-clock test runs now use the distinct status `simulated_protocol_only`. The `--allow-remote-model-api` flag is required before any remotely hosted HTTPS model endpoint can be used. This reduces accidental billable provider calls but cannot attest provider charges after intentional opt-in.
+
+**Measurement caveat:** a shared, self-authored stub is not an independent inference backend, and one request per model role is not proof of token parity or KV isolation. No actual model-provider run was conducted in CI.

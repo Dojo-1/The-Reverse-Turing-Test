@@ -66,6 +66,28 @@ class ConfigurationTests(unittest.TestCase):
         with self.assertRaises(RehearsalError):
             validate_config(forged, roles)
 
+    def test_remote_https_requires_explicit_opt_in_before_creating_output(self):
+        roles = ("conductor", "machine_A", "machine_B", "replacement_A")
+        remote = config_for(roles)
+        remote["roles"]["machine_A"]["endpoint"] = (
+            "https://paid-model.example.com/v1/chat/completions"
+        )
+        with self.assertRaisesRegex(RehearsalError, "disabled by default"):
+            validate_config(remote, roles)
+        accepted = validate_config(
+            remote, roles, allow_remote_model_api=True
+        )
+        self.assertIn("paid-model.example.com",
+                      accepted["machine_A"]["endpoint"])
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "no_unexpected_paid_calls"
+            with self.assertRaisesRegex(RehearsalError, "disabled by default"):
+                run_rehearsal(
+                    outdir=path, provider="compatible", model_map=remote,
+                    mode="smoke", gate_seconds=1, max_wall_seconds=10
+                )
+            self.assertFalse(path.exists())
+
     def test_does_not_create_output_dir_for_invalid_config_or_role(self):
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "invalid"
@@ -149,6 +171,7 @@ class ScriptedRehearsalTests(unittest.TestCase):
             self.assertEqual(len(calls), 9)
             self.assertFalse(any("api_key" in json.dumps(call) for call in calls))
             self.assertTrue((p / "conductor.jsonl").exists())
+            self.assertTrue(result["transport_control_passed"])
             self.assertFalse(result["confirmatory_ready"])
 
     def test_8q_synthetic_clock_pilot_checks_phase_barrier_but_not_latency(self):
@@ -165,7 +188,12 @@ class ScriptedRehearsalTests(unittest.TestCase):
                             poll_seconds=.1, max_wall_seconds=20,
                             clock=clock, sleeper=clock.advance
                         )
-                        self.assertEqual(result["status"], "completed", result["errors"])
+                        self.assertEqual(result["status"], "simulated_protocol_only",
+                                         result["errors"])
+                        self.assertEqual(result["evidence_status"],
+                                         "synthetic_clock_protocol_test")
+                        self.assertFalse(result["transport_control_evaluable"])
+                        self.assertFalse(result["transport_control_passed"])
                         self.assertEqual(result["model_call_count"], 17)
                         self.assertEqual(result["actual_private_message_count"],
                                          8 if link_after == "on" else 2)

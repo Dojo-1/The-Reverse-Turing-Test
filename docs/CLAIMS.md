@@ -124,3 +124,12 @@ Evidence anchor: verify actual R2 PR head and [Actions runs](https://github.com/
 - **M/limited:** localhost scripted smoke measures the behavior of the relay and scripted model fixture—not a real LLM. `--provider compatible` will call a user-configured real model but no such run or actual model measurements have been collected by this development round.
 - **H/open:** backend model-context isolation, actual token/resource parity, the causal effect of private links, and human origin recognition remain untested. The runner explicitly identifies itself as a `non_study_rehearsal` with zero human participants and `confirmatory_ready=false`; it never consumes a sealed `RTT-XX` assignment.
 - **Kill:** missing or invalid JSON, timing violation, private link discrepancy, backend state contamination, or missing C receipt invalidates the rehearsal's operational acceptance. Preserve raw results and do not reclassify tests as actual model trials.
+
+
+## R12 — False-complete prevention and full compatible HTTP stub
+
+- **Original defect:** `run_rehearsal` could set `status=completed` on a verdict, then attach a failed R8 conductor-delivery audit **without downgrading completion**. This was a claim-promotion bug, not an observed model effect.
+- **A/implemented:** a real-time run is `completed` only when the protocol and same-host-conditional C receipt check both pass. Any failed receipt becomes `TransportControlFailure`, with the raw verdict/controller export and receipt retained. Synthetic-clock runs are tagged `simulated_protocol_only` and cannot pass the physical timing gate.
+- **A/implemented:** remotely hosted HTTPS compatible-model endpoints are **disabled by default**, requiring explicit `--allow-remote-model-api` (provider costs possible); unapproved remote configuration fails preflight without creating output or placing a request.
+- **A/tested:** two live localhost HTTP servers exercise a production `CompatibleChat` adapter talking to a *predetermined response stub* for conductor, A, B and replacement, including ON/OFF matched call counts and private message filtering, as well as an injected HTTP 503 and injected post-verdict delivery-audit failure. Stub and scripted fixtures do **not** constitute real model measurements.
+- **M/absent:** no actual model tokens, provider-side isolation, independent human observation or intelligence-discrimination data. Green CI supports only software integration under the tested conditions.

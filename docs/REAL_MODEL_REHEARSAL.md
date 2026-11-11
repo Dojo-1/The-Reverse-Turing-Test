@@ -35,7 +35,7 @@ Provide a **private** JSON model map with exactly the roles needed for your chos
 
 Use the actual model IDs served by your compatible local server. `unchanged` needs only C/A/B; `machineB` needs C/A/B/replacement_B. Use distinct backend sessions where possible. **Different `CompatibleChat` objects and separate bearer tokens do not prove that an inference server shares no KV cache or global context.**
 
-Each role may optionally specify `max_output_tokens` (16–2048) and `api_key_env` (an environment-variable *name*, never the key). The runner fetches credentials from your local environment and never saves their values. Plain HTTP nonloopback inference and URLs containing credentials are rejected. External HTTPS model providers can bill you; use local endpoints unless you have separately approved and measured provider costs.
+Each role may optionally specify `max_output_tokens` (16–2048) and `api_key_env` (an environment-variable *name*, never the key). The runner fetches credentials from your local environment and never saves their values. Plain HTTP nonloopback inference and URLs containing credentials are rejected. External HTTPS model providers can bill you. **Remote model APIs are rejected by default**; to permit them you must explicitly pass `--allow-remote-model-api`, and you remain responsible for provider pricing. Local loopback endpoints require no such flag.
 
 ## Run the actual unbound 2+6 rehearsal
 
@@ -68,7 +68,9 @@ The new output directory contains:
 
 The manifest also includes a conditional R8 delivery check. A true `within_one_second_given_same_clock` is **only** evidence of observed transport behavior on the operator's assumed shared monotonic clock; it is **not** independent verification of the model's understanding or human identity.
 
-All completed runs are tagged `non_study_rehearsal`, `is_preregistered_trial=false`, `human_participants=0`, and `confirmatory_ready=false`. If an exception, invalid model completion, deadline miss or insufficient wall time occurs, the runner preserves the **failed** record and reason instead of fabricating a verdict.
+A real-time run is marked `completed` **only when its protocol completed and its conditional C-receipt transport audit passed**. If the verdict exists but the delivery check fails, `status=failed` and the original verdict, receipt evidence and typed error remain preserved. Injected-clock protocol tests are instead labeled `simulated_protocol_only` and are never physical transport measurements.
+
+All runs are tagged `is_preregistered_trial=false`, `human_participants=0`, and `confirmatory_ready=false`. Real-time runs use evidence status `non_study_rehearsal`; injected-clock tests are explicitly tagged `synthetic_clock_protocol_test`. If an exception, invalid model completion, deadline miss or insufficient wall time occurs, the runner preserves the **failed** record and reason instead of fabricating a verdict.
 
 Logs are created with owner-only POSIX modes and placed under a `private/` directory ignored by Git. **Windows NTFS access controls require separate configuration**; mode bits alone are not a Windows privacy guarantee. Avoid uploading controller exports or model credentials to public issues or pull requests.
 
