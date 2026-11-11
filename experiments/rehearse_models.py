@@ -19,6 +19,7 @@ import math
 import os
 from pathlib import Path
 import re
+from urllib.parse import urlsplit
 from threading import Event, Thread
 import time
 
@@ -54,7 +55,9 @@ def _hash(value):
     return hashlib.sha256(blob).hexdigest()
 
 
-def validate_config(raw, required_roles):
+def validate_config(raw, required_roles, *, allow_remote_model_api=False):
+    if type(allow_remote_model_api) is not bool:
+        raise RehearsalError("Remote-model opt-in must be a boolean")
     if not isinstance(raw, dict) or set(raw) != {"roles"}:
         raise RehearsalError("Model config needs exactly one 'roles' object")
     roles = raw["roles"]
@@ -75,6 +78,13 @@ def validate_config(raw, required_roles):
             endpoint = endpoint_url(spec["endpoint"], relay=False)
         except AdapterError as exc:
             raise RehearsalError(str(exc)) from None
+        host = urlsplit(endpoint).hostname.lower()
+        if (host not in ("localhost", "127.0.0.1", "::1")
+                and not allow_remote_model_api):
+            raise RehearsalError(
+                "Remote model APIs are disabled by default; explicit "
+                "--allow-remote-model-api is required (may incur charges)"
+            )
         name = spec.get("api_key_env")
         if name is not None and (
             not isinstance(name, str)
@@ -153,7 +163,8 @@ def _require_parameters(mode, condition, link_after, gate_seconds,
 def run_rehearsal(*, outdir, provider, model_map=None, mode="unbound-pilot",
                   condition="machineA", link_after="off", gate_seconds=45.,
                   poll_seconds=.1, max_wall_seconds=900.,
-                  private_handoff=True, clock=None, sleeper=None):
+                  private_handoff=True, clock=None, sleeper=None,
+                  allow_remote_model_api=False):
     """Execute one non-study machine-only game and preserve success or failure.
 
     Returns a manifest. Raises only for invalid preflight config or invalid
@@ -165,10 +176,16 @@ def run_rehearsal(*, outdir, provider, model_map=None, mode="unbound-pilot",
         raise RehearsalError("Provider must be compatible or scripted")
     if type(private_handoff) is not bool:
         raise RehearsalError("private_handoff must be boolean")
+    if type(allow_remote_model_api) is not bool:
+        raise RehearsalError("Remote-model API opt-in must be a boolean")
+    if provider == "scripted" and allow_remote_model_api:
+        raise RehearsalError("Scripted fixture cannot opt into remote model traffic")
     replacement = {"machineA": "replacement_A", "machineB": "replacement_B"}.get(condition)
     roles = ("conductor", "machine_A", "machine_B") + ((replacement,) if replacement else ())
     if provider == "compatible":
-        specs = validate_config(model_map, roles)
+        specs = validate_config(
+            model_map, roles, allow_remote_model_api=allow_remote_model_api
+        )
     elif model_map is not None:
         raise RehearsalError("Scripted tests cannot accept model endpoint configuration")
     else:
@@ -189,6 +206,13 @@ def run_rehearsal(*, outdir, provider, model_map=None, mode="unbound-pilot",
         "gate_seconds": 45.0 if mode == "unbound-pilot" else float(gate_seconds),
         "poll_seconds": poll_seconds, "max_wall_seconds": max_wall_seconds,
         "private_handoff": private_handoff,
+        "remote_model_api_opt_in": allow_remote_model_api,
+        "remote_model_role_count": sum(
+            spec.get("endpoint") is not None
+            and urlsplit(spec["endpoint"]).hostname.lower()
+            not in ("localhost", "127.0.0.1", "::1")
+            for spec in specs.values()
+        ),
         "model_configuration_sha256": _hash(specs),
         "model_configuration_public": specs,
         "external_model_backend_isolation_attested": False,
@@ -352,6 +376,30 @@ def run_rehearsal(*, outdir, provider, model_map=None, mode="unbound-pilot",
         manifest["actual_private_message_count"] = (
             len(game.private) if game is not None else None
         )
+        # Completion is a conjunctive control, NOT just receipt of a
+        # verdict. Keep the original failed transport audit and raw verdict,
+        # and never reclassify a real rehearsal as complete after failed C
+        # delivery. An injected clock is a separate protocol simulation.
+        transport_ok = (
+            manifest.get("delivery", {}).get(
+                "within_one_second_given_same_clock"
+            ) is True
+        )
+        manifest["transport_control_evaluable"] = clock is None
+        manifest["transport_control_passed"] = (
+            transport_ok if clock is None else False
+        )
+        if manifest["status"] == "completed":
+            if clock is not None:
+                manifest["status"] = "simulated_protocol_only"
+                manifest["evidence_status"] = "synthetic_clock_protocol_test"
+            elif not transport_ok:
+                manifest["status"] = "failed"
+                manifest["errors"].append({
+                    "kind": "TransportControlFailure",
+                    "detail": "Verdict exists but conductor delivery audit "
+                              "did not pass; preserve raw evidence.",
+                })
         manifest["confirmatory_ready"] = False
         _new_json(destination / "manifest.json", manifest)
     return manifest
@@ -373,6 +421,11 @@ def main(argv=None):
     parser.add_argument("--poll-seconds", type=float, default=.1)
     parser.add_argument("--max-wall-seconds", type=float, default=900.)
     parser.add_argument("--no-private-handoff", action="store_true")
+    parser.add_argument(
+        "--allow-remote-model-api", action="store_true",
+        help="explicitly permit remote HTTPS Chat Completions APIs, "
+             "which may incur provider charges; default is localhost only",
+    )
     args = parser.parse_args(argv)
     try:
         config = None
@@ -384,6 +437,7 @@ def main(argv=None):
             gate_seconds=args.gate_seconds, poll_seconds=args.poll_seconds,
             max_wall_seconds=args.max_wall_seconds,
             private_handoff=not args.no_private_handoff,
+            allow_remote_model_api=args.allow_remote_model_api,
         )
         print("Rehearsal:", report["status"], "model calls:",
               report["model_call_count"], "private messages:",
