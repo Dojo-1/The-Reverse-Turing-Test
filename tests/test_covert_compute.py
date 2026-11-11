@@ -189,11 +189,14 @@ class CovertComputeTests(unittest.TestCase):
         before_private = list(g.leech_receipts)
         before_audit = list(g.audit)
 
-        def failed_clock():
-            raise RuntimeError("synthetic clock failure")
+        def failed_event(*args, **kwargs):
+            # Game._event, not the pacing clock, owns the audit sequence.
+            # Fail after increment to test exact rollback to the old value.
+            g.sequence += 1
+            raise RuntimeError("synthetic event construction failure")
 
-        g._clock = failed_clock
-        with self.assertRaisesRegex(RuntimeError, "synthetic clock failure"):
+        g._event = failed_event
+        with self.assertRaisesRegex(RuntimeError, "event construction failure"):
             g.act("human", "leech_compute", {
                 "base": 2, "exponent": 10, "modulus": 101
             })
