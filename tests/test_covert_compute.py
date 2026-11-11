@@ -182,6 +182,26 @@ class CovertComputeTests(unittest.TestCase):
             g.act("human", "leech_compute", valid)
         self.assertEqual(g.export(), before)
 
+    def test_audit_event_failure_does_not_debit_donor_or_keep_ghost_receipt(self):
+        g = world()
+        before_credit = dict(g.compute_reserves)
+        before_sequence = g.sequence
+        before_private = list(g.leech_receipts)
+        before_audit = list(g.audit)
+
+        def failed_clock():
+            raise RuntimeError("synthetic clock failure")
+
+        g._clock = failed_clock
+        with self.assertRaisesRegex(RuntimeError, "synthetic clock failure"):
+            g.act("human", "leech_compute", {
+                "base": 2, "exponent": 10, "modulus": 101
+            })
+        self.assertEqual(g.compute_reserves, before_credit)
+        self.assertEqual(g.sequence, before_sequence)
+        self.assertEqual(g.leech_receipts, before_private)
+        self.assertEqual(g.audit, before_audit)
+
     def test_machine_conductor_and_observer_cannot_steal(self):
         g = world()
         for role in ("machine_A", "machine_B", "replacement_A",
