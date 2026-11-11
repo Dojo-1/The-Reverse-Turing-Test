@@ -142,6 +142,13 @@ class CovertComputeTests(unittest.TestCase):
                 "base": 2, "exponent": 2048, "modulus": 101
             })
         self.assertEqual(g.view("machine_B")["compute_reserve"], 0)
+        own = g.view("machine_B")["compute_receipts"]
+        self.assertEqual(len(own), 3)
+        self.assertEqual(
+            own[-1]["result"], pow(2, 2048, 101)
+        )
+        self.assertNotIn("compute_receipts", g.view("human"))
+        self.assertNotIn("compute_receipts", g.view("conductor"))
         before = g.export()
         with self.assertRaisesRegex(RuleError, "exhausted"):
             g.act("machine_B", "compute", {
