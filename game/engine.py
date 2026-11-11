@@ -12,6 +12,11 @@ from hmac import compare_digest
 import time
 from threading import RLock
 
+from .covert_compute import (
+    MACHINE_ROLES, INITIAL_RESERVE, MAX_LEECH_ATTEMPTS,
+    IDENTIFICATION_CONFIDENCE, REFERENCE_SECONDS, evaluate_modexp,
+)
+
 
 class RuleError(ValueError):
     """An unauthorized or invalid game move."""
@@ -55,6 +60,12 @@ class Game:
         self.pilot_abort_reason = None
         self.pilot_assignment = None
         self.pilot_seed_commitment = None
+        # Optional OPEN GAME variant only. Never part of RTT-PILOT/1.
+        self.covert_leech = False
+        self.covert_reference_seconds = REFERENCE_SECONDS
+        self.covert_start_monotonic = None
+        self.compute_reserves = {}
+        self.leech_receipts = []
 
     def identify(self, token):
         if not isinstance(token, str) or token not in self.token_to_role:
@@ -242,9 +253,58 @@ class Game:
             and not self.timing_violations
         )
 
+    def _covert_result(self):
+        """Controller-only identification report; existing Brier remains intact."""
+        if not self.covert_leech or not self.revealed or self.verdict is None:
+            return None
+        truth = self._truth()
+        confidence = self.verdict["p"][truth]
+        seconds = (self._clock() - self.covert_start_monotonic
+                   if self.covert_start_monotonic is not None else None)
+        return {
+            "identification_confidence_threshold": IDENTIFICATION_CONFIDENCE,
+            "correct_class": truth,
+            "probability_of_correct_class": confidence,
+            "correct_at_70_percent": confidence >= IDENTIFICATION_CONFIDENCE,
+            "human_undetected_at_70_percent": (
+                confidence < IDENTIFICATION_CONFIDENCE
+                if truth in ("human_A", "human_B") else None
+            ),
+            "elapsed_seconds": seconds,
+            "reference_seconds": self.covert_reference_seconds,
+            "over_reference": (
+                seconds > self.covert_reference_seconds
+                if seconds is not None else None
+            ),
+        }
+
     def _post_controller(self, action, data):
+        if action == "configure_covert_leech":
+            # A separately identified optional variant: no retroactive
+            # enabling or contamination of the sealed 24-trial pilot.
+            if (self.covert_leech or self.pilot_mode or self.public
+                    or self.intervened or self.revealed or self.verdict):
+                raise RuleError("Covert variant must be enabled before the open game")
+            seconds = data.get("reference_seconds", REFERENCE_SECONDS)
+            if (type(seconds) not in (float, int)
+                    or not math.isfinite(seconds) or not 60 <= seconds <= 1800):
+                raise RuleError("Reference duration must be 60–1800 seconds")
+            self.covert_leech = True
+            self.covert_reference_seconds = float(seconds)
+            self.compute_reserves = {
+                role: INITIAL_RESERVE for role in MACHINE_ROLES
+            }
+            self.audit.append(self._event(
+                "configure_covert_leech", reference_seconds=float(seconds),
+                confidence_threshold=IDENTIFICATION_CONFIDENCE,
+                machine_compute_reserve=INITIAL_RESERVE,
+                human_leech_actions=MAX_LEECH_ATTEMPTS,
+                resource_kind="virtual_game_compute_credits",
+            ))
+            return
         if action in ("configure_pilot", "configure_pilot_assigned"):
-            if (self.pilot_mode or self.public or self.intervened
+            if (self.pilot_mode or self.covert_leech
+                    or self.public or self.intervened
                     or self.revealed or self.verdict is not None
                     or self.pacing_seconds is not None):
                 raise RuleError("Pilot configuration must precede all interrogation and pacing")
@@ -435,6 +495,8 @@ class Game:
             body = self._text(data)
             if self.pacing_seconds is not None and self.pending_release is not None:
                 raise RuleError("Await the fixed response release boundary")
+            if self.covert_leech and self.covert_start_monotonic is None:
+                self.covert_start_monotonic = self._clock()
             question = self._event("question", channel=channel, speaker="C", body=body)
             self.public.append(question)
             if self.pacing_seconds is not None:
@@ -483,6 +545,45 @@ class Game:
         channel = self._active_channel(role)
         if channel is None:
             raise RuleError("This participant is not currently active")
+        if action in ("compute", "leech_compute"):
+            if not self.covert_leech:
+                raise RuleError("Compute-credit actions require the optional open-game variant")
+            if action == "leech_compute":
+                if role != "human" or self.condition not in ("humanA", "humanB"):
+                    raise RuleError("Only the substituted human may covertly borrow compute")
+                if len(self.leech_receipts) >= MAX_LEECH_ATTEMPTS:
+                    raise RuleError("Human covert-compute action limit reached")
+                donor_channel = "B" if channel == "A" else "A"
+                donor_role = self.active[donor_channel]
+                if donor_role not in MACHINE_ROLES:
+                    raise RuleError("Only an active non-conductor machine may donate compute")
+            else:
+                if role not in MACHINE_ROLES:
+                    raise RuleError("Only an active machine may use its own compute reserve")
+                donor_role = role
+                donor_channel = channel
+            try:
+                task, result, cost = evaluate_modexp(data)
+            except ValueError as error:
+                raise RuleError(str(error)) from None
+            if self.compute_reserves[donor_role] < cost:
+                raise RuleError("The selected machine's compute reserve is exhausted")
+            # All server-side game-credit accounting happens under Game.lock.
+            # No real machine hardware, account or inference quota is accessed.
+            remaining = self.compute_reserves[donor_role] - cost
+            self.compute_reserves[donor_role] = remaining
+            receipt = {
+                "donor_channel": donor_channel, "task": task,
+                "result": result, "cost": cost,
+            }
+            if action == "leech_compute":
+                self.leech_receipts.append(receipt)
+            self.audit.append(self._event(
+                action, donor_role=donor_role, donor_channel=donor_channel,
+                initiated_by=role, task=task, result=result,
+                cost=cost, remaining=remaining,
+            ))
+            return
         if action in ("answer", "respond"):
             # A machine's public answer and optional private text note form
             # ONE validated server transaction, under Game.lock. The legacy
@@ -630,6 +731,13 @@ class Game:
                     "timing_violations": list(self.timing_violations),
                     "public": list(self.public), "private": list(self.private),
                     "audit": list(self.audit),
+                    **({
+                        "covert_leech_variant": True,
+                        "covert_reference_seconds": self.covert_reference_seconds,
+                        "compute_reserves": dict(self.compute_reserves),
+                        "leech_attempts_used": len(self.leech_receipts),
+                        "covert_identification": self._covert_result(),
+                    } if self.covert_leech else {}),
                 }
             if role == "observer":
                 return {
@@ -677,6 +785,17 @@ class Game:
                 "can_whisper": self._allows_link(role) and self.links[
                     "A_to_B" if channel == "A" else "B_to_A"
                 ],
+                **({
+                    "compute_reserve": self.compute_reserves[role],
+                    "can_compute": self.verdict is None and not self.revealed,
+                } if self.covert_leech and role in MACHINE_ROLES else {}),
+                **({
+                    "can_leech": self.verdict is None and not self.revealed
+                        and len(self.leech_receipts) < MAX_LEECH_ATTEMPTS,
+                    "leech_actions_remaining": MAX_LEECH_ATTEMPTS - len(self.leech_receipts),
+                    "leech_donor_channel": "B" if channel == "A" else "A",
+                    "leech_receipts": [dict(item) for item in self.leech_receipts],
+                } if self.covert_leech and role == "human" else {}),
             }
 
     def export(self):
