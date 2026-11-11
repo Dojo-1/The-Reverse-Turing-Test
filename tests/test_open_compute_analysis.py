@@ -107,7 +107,7 @@ class OpenComputeAnalysisTests(unittest.TestCase):
         self.assertIsNone(r["human_escape_difference_borrow_minus_control"])
 
     def test_manifest_commitment_checks_exact_bytes(self):
-        self.plan["assignments"][0]["arm"] = "borrow_permitted"
+        self.plan["assignments"][0]["arm"] = ("no_borrow" if self.plan["assignments"][0]["arm"] == "borrow_permitted" else "borrow_permitted")
         self.save_plan()
         with self.assertRaisesRegex(ValueError, "unbalanced"):
             read_plan(self.plan_path, self.sha)
