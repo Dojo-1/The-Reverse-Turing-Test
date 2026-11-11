@@ -14,7 +14,8 @@ from threading import RLock
 
 from .covert_compute import (
     MACHINE_ROLES, INITIAL_RESERVE, MAX_LEECH_ATTEMPTS,
-    IDENTIFICATION_CONFIDENCE, REFERENCE_SECONDS, evaluate_modexp,
+    TURING_ACCURACY_REFERENCE, REFERENCE_SECONDS, evaluate_modexp,
+    classify_verdict,
 )
 
 
@@ -254,22 +255,34 @@ class Game:
         )
 
     def _covert_result(self):
-        """Controller-only identification report; existing Brier remains intact."""
+        """Controller-only identification result; no per-verdict 70% gate.
+
+        The 70% in Turing's 1950 prediction refers to the interrogator's
+        probability of correct identification after five minutes. It is
+        NOT a threshold for confidence in a single answer. Source:
+        https://plato.stanford.edu/entries/turing-test/
+        """
         if not self.covert_leech or not self.revealed or self.verdict is None:
             return None
         truth = self._truth()
-        confidence = self.verdict["p"][truth]
+        prediction = classify_verdict(self.verdict["p"])
+        correct = prediction == truth
         seconds = (self._clock() - self.covert_start_monotonic
                    if self.covert_start_monotonic is not None else None)
+        actual_human = truth in ("human_A", "human_B")
         return {
-            "identification_confidence_threshold": IDENTIFICATION_CONFIDENCE,
-            "correct_class": truth,
-            "probability_of_correct_class": confidence,
-            "correct_at_70_percent": confidence >= IDENTIFICATION_CONFIDENCE,
-            "human_undetected_at_70_percent": (
-                confidence < IDENTIFICATION_CONFIDENCE
-                if truth in ("human_A", "human_B") else None
+            "predicted_class": prediction,
+            "true_class": truth,
+            "correct_identification": correct,
+            "human_escaped_correct_identification": (
+                not correct if actual_human else None
             ),
+            "human_presence_missed": (
+                prediction == "no_human" if actual_human else None
+            ),
+            "probability_assigned_to_truth": self.verdict["p"][truth],
+            "turing_accuracy_reference": TURING_ACCURACY_REFERENCE,
+            "reference_kind": "prediction_of_interrogator_accuracy_across_games",
             "elapsed_seconds": seconds,
             "reference_seconds": self.covert_reference_seconds,
             "over_reference": (
@@ -296,7 +309,8 @@ class Game:
             }
             self.audit.append(self._event(
                 "configure_covert_leech", reference_seconds=float(seconds),
-                confidence_threshold=IDENTIFICATION_CONFIDENCE,
+                turing_accuracy_reference=TURING_ACCURACY_REFERENCE,
+                turing_reference_kind="accuracy_across_games_not_per_verdict",
                 machine_compute_reserve=INITIAL_RESERVE,
                 human_leech_actions=MAX_LEECH_ATTEMPTS,
                 resource_kind="virtual_game_compute_credits",
