@@ -71,6 +71,12 @@ function buildController(v) {
     "<span class='pill mint'>INDEPENDENT CONTROLLER</span>",
     "<h2>Hold the secret.</h2><p>You control the intervention. Do not expose it to C.</p>",
     "<div id='phase' class='status'></div>",
+    "<div class='control-group'><h3>Optional / Covert compute</h3>",
+    "<p class='small'>The human still tries to pass as a machine. In this open-game variant, a disguised human may secretly borrow finite IN-GAME computation from the other machine, never C. The donor can notice resource depletion.</p>",
+    "<form id='covert-config'><label>Time reference in seconds (not a deadline)",
+    "<input id='covert-reference' type='number' min='60' max='1800' value='300' required></label>",
+    "<button class='btn alt'>Enable covert compute variant</button></form>",
+    "<div id='covert-status' class='status'></div></div>",
     "<div class='control-group'><h3>00 / Strict pilot (optional)</h3>",
     "<p class='small'>For a real assigned pilot, first run the controller-only schedule binder in a private terminal. This page can also start an UNBOUND rehearsal, which the evidence auditor will reject as study data.</p>",
     "<button class='btn alt' type='button' id='enable-pilot'>Start unbound rehearsal</button>",
@@ -116,6 +122,12 @@ function buildController(v) {
     document.getElementById(prefix + "-ab").checked = v.links.A_to_B;
     document.getElementById(prefix + "-ba").checked = v.links.B_to_A;
   }
+  document.getElementById("covert-config").onsubmit = e => {
+    e.preventDefault();
+    act("configure_covert_leech", {
+      reference_seconds: Number(document.getElementById("covert-reference").value)
+    });
+  };
   document.getElementById("enable-pilot").onclick = async () => {
     const ok = await act("configure_pilot", {});
     if (ok) {
@@ -234,7 +246,14 @@ function buildRespondent(v) {
     "<div class='control-group' id='private-actions'><h3>Optional private message</h3>",
     "<p class='small'>This is simulated side-channel text, not KV-cache transfer.</p>",
     "<form id='whisper-form'><label>Private note<textarea id='whisper' maxlength='2000' required></textarea></label>",
-    "<button class='btn alt'>Send to peer endpoint</button></form></div>"
+    "<button class='btn alt'>Send to peer endpoint</button></form></div>",
+    "<div class='control-group hidden' id='compute-tools'><h3>Virtual compute</h3>",
+    "<p class='small' id='compute-status'></p>",
+    "<form id='compute-form'><label>Base<input id='compute-base' type='number' min='0' max='1000000000' value='2' required></label>",
+    "<label>Exponent<input id='compute-exp' type='number' min='0' max='4096' value='10' required></label>",
+    "<label>Modulus<input id='compute-mod' type='number' min='2' max='1000000000' value='101' required></label>",
+    "<button class='btn alt' id='compute-button'>Run in-game computation</button></form>",
+    "<p id='compute-result' class='small'></p></div>"
   ].join(""), [
     "<h2>This channel's history</h2>",
     "<p class='small'>You cannot see the other channel's public conversation.</p>",
@@ -253,6 +272,21 @@ function buildRespondent(v) {
     const input = document.getElementById("whisper");
     if (await act("whisper", { body: input.value })) input.value = "";
   };
+  document.getElementById("compute-form").onsubmit = async e => {
+    e.preventDefault();
+    const read = id => Number(document.getElementById(id).value);
+    const values = {
+      base: read("compute-base"),
+      exponent: read("compute-exp"),
+      modulus: read("compute-mod")
+    };
+    if (!Object.values(values).every(Number.isSafeInteger)) {
+      toast("Compute inputs must be whole numbers in the allowed ranges.");
+      return;
+    }
+    const human = document.getElementById("compute-tools").dataset.role === "human";
+    await act(human ? "leech_compute" : "compute", values);
+  };
 }
 function render(v) {
   if (v.role === "controller") {
@@ -268,6 +302,14 @@ function render(v) {
       "BASELINE · obtain one answer each from A and B";
     const paced = v.pacing_seconds !== null;
     const pilot = !!v.pilot_enabled;
+    document.getElementById("covert-config").classList.toggle("hidden",
+      !!v.covert_leech_variant || pilot || v.public.length > 0 ||
+      v.intervened || !!v.verdict);
+    document.getElementById("covert-status").textContent = v.covert_leech_variant
+      ? ("COURIER MODE · virtual compute · controller only · "
+        + (v.leech_attempts_used || 0) + "/3 attempts · "
+        + v.covert_reference_seconds + "s reference, no hard cutoff")
+      : "Normal game: covert compute disabled.";
     document.getElementById("enable-pilot").classList.toggle("hidden",
       pilot || paced || v.public.length > 0 || v.intervened || !!v.verdict);
     document.getElementById("pilot-control").textContent = pilot
@@ -318,6 +360,18 @@ function render(v) {
     if (v.verdict) out.append(el("div", "metrics", "Locked: " + JSON.stringify(v.verdict.p)));
     if (v.score) out.append(el("div", "metrics",
       "Truth: " + v.condition + " · Brier: " + v.score.brier.toFixed(4)));
+    if (v.covert_identification) {
+      const score = v.covert_identification;
+      out.append(el("div", "metrics",
+        "Categorical identification: " + score.predicted_class +
+        " · truth: " + score.true_class +
+        " · correct: " + (score.correct_identification ? "YES" : "NO") +
+        " · " + Math.round(score.elapsed_seconds || 0) + "s used (" +
+        score.reference_seconds + "s reference)"));
+      out.append(el("p", "small",
+        "Historical Turing 70% refers to correct identification across games, " +
+        "NOT per-verdict confidence. Single-trial result is descriptive."));
+    }
     if (pilot && (v.verdict || v.pilot_aborted)) out.append(el(
       "div", "metrics",
       "Local protocol: " + (v.pilot_valid_for_primary ? "COMPLETE" : "INCOMPLETE") +
@@ -363,6 +417,27 @@ function render(v) {
       : "";
     document.getElementById("private-actions").classList.toggle("hidden", !v.can_whisper || v.locked || v.revealed);
     document.getElementById("private-feed-wrap").classList.toggle("hidden", !v.private.length);
+    const human = v.can_leech !== undefined;
+    const compute = human || v.compute_reserve !== undefined;
+    const computePanel = document.getElementById("compute-tools");
+    computePanel.classList.toggle("hidden", !compute);
+    computePanel.dataset.role = human ? "human" : "machine";
+    if (compute) {
+      const allowed = human ? v.can_leech : v.can_compute;
+      document.getElementById("compute-button").disabled = !allowed;
+      document.getElementById("compute-status").textContent = human
+        ? ("Covert borrow from machine " + v.leech_donor_channel +
+           " · remaining attempts: " + v.leech_actions_remaining +
+           " · use sparingly to avoid behavioral clues")
+        : ("Your remaining in-game compute credits: " + v.compute_reserve +
+           " · no direct notice of who consumed them");
+      const receipts = human ? v.leech_receipts : v.compute_receipts;
+      const last = receipts.length ? receipts[receipts.length - 1] : null;
+      document.getElementById("compute-result").textContent = last
+        ? ("Latest " + (human ? "borrowed" : "own") + " result: " + last.result +
+           " · cost " + last.cost + " credits")
+        : "";
+    }
     entries("feed", v.public);
     entries("private-feed", v.private);
   }
