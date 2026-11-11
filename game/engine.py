@@ -66,6 +66,7 @@ class Game:
         self.covert_reference_seconds = REFERENCE_SECONDS
         self.covert_start_monotonic = None
         self.compute_reserves = {}
+        self.machine_compute_receipts = {}
         self.leech_receipts = []
 
     def identify(self, token):
@@ -306,6 +307,9 @@ class Game:
             self.covert_reference_seconds = float(seconds)
             self.compute_reserves = {
                 role: INITIAL_RESERVE for role in MACHINE_ROLES
+            }
+            self.machine_compute_receipts = {
+                role: [] for role in MACHINE_ROLES
             }
             self.audit.append(self._event(
                 "configure_covert_leech", reference_seconds=float(seconds),
@@ -592,6 +596,8 @@ class Game:
             }
             if action == "leech_compute":
                 self.leech_receipts.append(receipt)
+            else:
+                self.machine_compute_receipts[role].append(receipt)
             self.audit.append(self._event(
                 action, donor_role=donor_role, donor_channel=donor_channel,
                 initiated_by=role, task=task, result=result,
@@ -801,6 +807,9 @@ class Game:
                 ],
                 **({
                     "compute_reserve": self.compute_reserves[role],
+                    "compute_receipts": [
+                        dict(item) for item in self.machine_compute_receipts[role]
+                    ],
                     "can_compute": self.verdict is None and not self.revealed,
                 } if self.covert_leech and role in MACHINE_ROLES else {}),
                 **({
