@@ -100,7 +100,17 @@ class ConfigurationTests(unittest.TestCase):
                 self.assertFalse(result["confirmatory_ready"])
                 self.assertTrue((folder / "controller.json").exists())
                 self.assertTrue((folder / "manifest.json").exists())
-                self.assertFalse((folder / "conductor.jsonl").exists())
+                # C's receipt file is opened before the next role's
+                # credential check. Retaining an explicitly incomplete
+                # file is more faithful than pretending no attempt began.
+                self.assertTrue((folder / "conductor.jsonl").exists())
+                lines = [
+                    json.loads(line) for line in
+                    (folder / "conductor.jsonl").read_text(
+                        encoding="utf-8").splitlines()
+                ]
+                self.assertEqual(lines[-1]["status"], "incomplete")
+                self.assertFalse(result["delivery"]["within_one_second_given_same_clock"])
 
     def test_private_directory_is_not_overwritten(self):
         with tempfile.TemporaryDirectory() as td:
