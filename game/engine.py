@@ -589,20 +589,27 @@ class Game:
             # All server-side game-credit accounting happens under Game.lock.
             # No real machine hardware, account or inference quota is accessed.
             remaining = self.compute_reserves[donor_role] - cost
-            self.compute_reserves[donor_role] = remaining
             receipt = {
                 "donor_channel": donor_channel, "task": task,
                 "result": result, "cost": cost,
             }
+            original_sequence = self.sequence
+            try:
+                ledger = self._event(
+                    action, donor_role=donor_role, donor_channel=donor_channel,
+                    initiated_by=role, task=task, result=result,
+                    cost=cost, remaining=remaining,
+                )
+            except Exception:
+                self.sequence = original_sequence
+                raise
+            # Publish credit mutation and the controller-only record together.
+            self.compute_reserves[donor_role] = remaining
             if action == "leech_compute":
                 self.leech_receipts.append(receipt)
             else:
                 self.machine_compute_receipts[role].append(receipt)
-            self.audit.append(self._event(
-                action, donor_role=donor_role, donor_channel=donor_channel,
-                initiated_by=role, task=task, result=result,
-                cost=cost, remaining=remaining,
-            ))
+            self.audit.append(ledger)
             return
         if action in ("answer", "respond"):
             # A machine's public answer and optional private text note form
