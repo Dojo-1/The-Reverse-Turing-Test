@@ -20,7 +20,7 @@ This *does not* prove human/machine computational equivalence in real hardware o
 
 The [Stanford Encyclopedia of Philosophy, “The Turing Test”](https://plato.stanford.edu/entries/turing-test/), §1 and §3.2, quotes Turing's 1950 prediction:
 
-- Approximate storage capacity: **\(10^9\)** (one billion).
+- Approximate storage capacity: **$10^9$** (one billion).
 - After **five minutes of questioning**, an average interrogator would have **no more than a 70% chance of making the correct identification**.
 - In the original machine-versus-human game summarized by Stanford, the *machine* attempts to deceive the interrogator while the *human* assists correct identification. Our reverse game **deliberately swaps the human's incentive**; it is not Turing's original design.
 
