@@ -52,6 +52,8 @@ def summarize_identifications(results):
         "turing_prediction_correct_fraction_reference": TURING_ACCURACY_REFERENCE,
         "reference_question_seconds": REFERENCE_SECONDS,
         "descriptive_only": True,
+        "directly_comparable_to_turing_original_game": False,
+        "comparison_limit": "reversed roles and three classes including no_human",
         "does_not_establish_turing_prediction": True,
     }
 
