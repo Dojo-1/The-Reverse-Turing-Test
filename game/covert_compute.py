@@ -28,6 +28,34 @@ def classify_verdict(p):
     return choices[0] if len(choices) == 1 else "undecided"
 
 
+def summarize_identifications(results):
+    """Descriptive accuracy across completed game reports, never confidence.
+
+    Turing's <=70% prediction concerned the interrogator's chance of right
+    identification after five minutes, not a per-game confidence cutoff.
+    SOURCE: Stanford Encyclopedia of Philosophy, "The Turing Test", s.1.
+    This helper is not a statistical hypothesis test and ignores no failures
+    silently: inputs must be completed controller-only identification rows.
+    """
+    if not isinstance(results, list):
+        raise ValueError("Expected a list of completed identification results")
+    for row in results:
+        if (not isinstance(row, dict)
+                or type(row.get("correct_identification")) is not bool):
+            raise ValueError("Every row needs a completed categorical identification")
+    n = len(results)
+    correct = sum(r["correct_identification"] for r in results)
+    return {
+        "n": n,
+        "n_correct": correct,
+        "empirical_correct_fraction": correct / n if n else None,
+        "turing_prediction_correct_fraction_reference": TURING_ACCURACY_REFERENCE,
+        "reference_question_seconds": REFERENCE_SECONDS,
+        "descriptive_only": True,
+        "does_not_establish_turing_prediction": True,
+    }
+
+
 def evaluate_modexp(data):
     """Return (sanitized task, result, game-credit cost), without side effects."""
     params = {}
