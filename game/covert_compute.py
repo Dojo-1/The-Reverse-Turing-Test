@@ -12,8 +12,20 @@ MACHINE_ROLES = frozenset((
 ))
 INITIAL_RESERVE = 12
 MAX_LEECH_ATTEMPTS = 3
-IDENTIFICATION_CONFIDENCE = 0.70
+TURING_ACCURACY_REFERENCE = 0.70
 REFERENCE_SECONDS = 300
+
+
+def classify_verdict(p):
+    """Unique maximum among the three declared probabilities.
+
+    Exact ties produce 'undecided' rather than an arbitrary ordering
+    advantage. This deterministic decision is separate from calibration.
+    """
+    classes = ("no_human", "human_A", "human_B")
+    best = max(p[key] for key in classes)
+    choices = [key for key in classes if p[key] == best]
+    return choices[0] if len(choices) == 1 else "undecided"
 
 
 def evaluate_modexp(data):
