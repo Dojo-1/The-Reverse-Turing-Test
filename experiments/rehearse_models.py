@@ -153,7 +153,7 @@ def _require_parameters(mode, condition, link_after, gate_seconds,
 def run_rehearsal(*, outdir, provider, model_map=None, mode="unbound-pilot",
                   condition="machineA", link_after="off", gate_seconds=45.,
                   poll_seconds=.1, max_wall_seconds=900.,
-                  private_handoff=True):
+                  private_handoff=True, clock=None, sleeper=None):
     """Execute one non-study machine-only game and preserve success or failure.
 
     Returns a manifest. Raises only for invalid preflight config or invalid
@@ -193,6 +193,7 @@ def run_rehearsal(*, outdir, provider, model_map=None, mode="unbound-pilot",
         "model_configuration_public": specs,
         "external_model_backend_isolation_attested": False,
         "human_participants": 0,
+        "clock_source": "synthetic_injected_test" if clock is not None else "OS_monotonic",
         "status": "started",
         "errors": [],
     }
@@ -206,7 +207,7 @@ def run_rehearsal(*, outdir, provider, model_map=None, mode="unbound-pilot",
     deadline = time.monotonic() + max_wall_seconds
     terminal_status = "incomplete"
     try:
-        game = Game()
+        game = Game(clock=clock)
         server = ThreadingHTTPServer(
             ("127.0.0.1", 0), handler_factory(game)
         )
@@ -281,7 +282,7 @@ def run_rehearsal(*, outdir, provider, model_map=None, mode="unbound-pilot",
                 if role not in actors:
                     raise RehearsalError("Unexpected or unauthorized actor in model-only rehearsal")
                 actors[role].step()
-            time.sleep(poll_seconds)
+            (sleeper or time.sleep)(poll_seconds)
         if not completed:
             raise RehearsalError("Rehearsal exceeded its fixed wall-clock budget")
 
@@ -318,7 +319,13 @@ def run_rehearsal(*, outdir, provider, model_map=None, mode="unbound-pilot",
         if game is not None:
             exported = game.export()
             _new_json(destination / "controller.json", exported)
-            if receipt is not None:
+            if receipt is not None and clock is not None:
+                manifest["delivery"] = {
+                    "within_one_second_given_same_clock": False,
+                    "confirmatory_ready": False,
+                    "errors": ["synthetic_clock_not_comparable_to_conductor"],
+                }
+            elif receipt is not None:
                 try:
                     record = [
                         json.loads(line) for line in
