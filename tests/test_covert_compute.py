@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from game.engine import Game, RuleError
-from game.covert_compute import evaluate_modexp
+from game.covert_compute import evaluate_modexp, summarize_identifications
 from game.server import handler_factory
 
 
@@ -192,36 +192,58 @@ class CovertComputeTests(unittest.TestCase):
                 "base": 2, "exponent": 10, "modulus": 101
             })
 
-    def test_70_percent_is_correct_origin_confidence_not_accuracy_claim(self):
+    def test_stanford_turing_reference_is_aggregate_not_verdict_threshold(self):
+        """Turing's 70% is a chance of right ID, not confidence in one game."""
         def outcome(condition, p):
             clock = Clock()
             game = world(condition, clock=clock)
             game.act("conductor", "verdict", {
-                "p": p, "evidence": "Threshold rehearsal only"
+                "p": p, "evidence": "Categorical identification test only"
             })
             game.act("controller", "reveal", {})
             return game.view("controller")["covert_identification"]
 
-        below = outcome("humanA", {
-            "no_human": .31, "human_A": .69, "human_B": 0.
+        low_confidence_but_correct = outcome("humanA", {
+            "no_human": .31, "human_A": .39, "human_B": .30
         })
-        self.assertTrue(below["human_undetected_at_70_percent"])
-        self.assertFalse(below["correct_at_70_percent"])
-        at = outcome("humanA", {
-            "no_human": .30, "human_A": .70, "human_B": 0.
+        self.assertTrue(low_confidence_but_correct["correct_identification"])
+        self.assertFalse(low_confidence_but_correct[
+            "human_escaped_correct_identification"
+        ])
+        self.assertNotIn("correct_at_70_percent", low_confidence_but_correct)
+        self.assertEqual(low_confidence_but_correct["turing_accuracy_reference"], .7)
+
+        wrong_position = outcome("humanA", {
+            "no_human": .05, "human_A": .15, "human_B": .80
         })
-        self.assertTrue(at["correct_at_70_percent"])
-        self.assertFalse(at["human_undetected_at_70_percent"])
-        wrong = outcome("humanA", {
-            "no_human": 0., "human_A": .1, "human_B": .9
+        self.assertFalse(wrong_position["correct_identification"])
+        self.assertTrue(wrong_position["human_escaped_correct_identification"])
+        self.assertFalse(wrong_position["human_presence_missed"])
+
+        human_missed = outcome("humanA", {
+            "no_human": .60, "human_A": .25, "human_B": .15
         })
-        self.assertFalse(wrong["correct_at_70_percent"])
-        self.assertTrue(wrong["human_undetected_at_70_percent"])
+        self.assertTrue(human_missed["human_escaped_correct_identification"])
+        self.assertTrue(human_missed["human_presence_missed"])
+
         machine_only = outcome("unchanged", {
-            "no_human": .8, "human_A": .1, "human_B": .1
+            "no_human": .5, "human_A": .3, "human_B": .2
         })
-        self.assertTrue(machine_only["correct_at_70_percent"])
-        self.assertIsNone(machine_only["human_undetected_at_70_percent"])
+        self.assertTrue(machine_only["correct_identification"])
+        self.assertIsNone(machine_only["human_escaped_correct_identification"])
+        self.assertEqual(machine_only["reference_kind"],
+                         "prediction_of_interrogator_accuracy_across_games")
+
+        reports = [low_confidence_but_correct] * 7 + [wrong_position] * 3
+        summary = summarize_identifications(reports)
+        self.assertEqual(summary["n"], 10)
+        self.assertEqual(summary["n_correct"], 7)
+        self.assertAlmostEqual(summary["empirical_correct_fraction"], .7)
+        self.assertTrue(summary["descriptive_only"])
+        self.assertTrue(summary["does_not_establish_turing_prediction"])
+        self.assertIsNone(summarize_identifications([])["empirical_correct_fraction"])
+        with self.assertRaises(ValueError):
+            summarize_identifications([{"correct_identification": .7}])
 
     def test_five_minute_time_reference_is_not_a_hard_deadline(self):
         clock = Clock()
