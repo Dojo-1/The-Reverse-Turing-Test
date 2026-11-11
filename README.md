@@ -56,6 +56,8 @@ Set `RTT_ROLE_TOKEN` to **machine_A's** token in that process first. Use distinc
 
 **Open game** — free-form interrogation, concealed substitution, optional private links and optional paced replies.
 
+**Optional covert-compute twist** — the concealed human may secretly borrow limited **in-game** compute credits from the other active machine (never C), risking indirect exposure through the donor’s behavior. The goals are unchanged. [Variant rules](docs/COVERT_COMPUTE.md).
+
 **Strict pilot** — a precommitted 24-trial design; per trial: two genuine-machine baseline questions → concealed intervention → public continuation marker → six questions → locked probabilities. Fixed 45-second answer gates, explicit aborts, independent read-only timing witness, and an [offline evidence auditor](docs/PILOT_ANALYSIS.md).
 
 [**Run a local model rehearsal**](docs/REAL_MODEL_REHEARSAL.md) · [**Strict pilot rules**](docs/STRICT_PILOT.md) · [**Bind a sealed trial**](docs/SEALED_ASSIGNMENT.md) · [**Preregistration**](docs/PILOT_PREREGISTRATION.md) · [**Timing limits**](docs/PACING.md) · [**C's receipt log**](docs/CONDUCTOR_RECEIPT.md)
