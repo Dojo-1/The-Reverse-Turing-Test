@@ -271,6 +271,7 @@ class CovertComputeTests(unittest.TestCase):
         self.assertAlmostEqual(summary["empirical_correct_fraction"], .7)
         self.assertTrue(summary["descriptive_only"])
         self.assertTrue(summary["does_not_establish_turing_prediction"])
+        self.assertFalse(summary["directly_comparable_to_turing_original_game"])
         self.assertIsNone(summarize_identifications([])["empirical_correct_fraction"])
         with self.assertRaises(ValueError):
             summarize_identifications([{"correct_identification": .7}])
